@@ -145,131 +145,168 @@ close BED;
 my $anytrans = 0;
 
 my %t2 = ();
+
+my %types = ("translocation" => "t",
+	     "inv" => "inv",
+	     "del"=> "del",
+	     "dup" => "dup");
     
 open(T,"gunzip -c $translocations |") || die;
 while(<T>){
-    next if /^#/;
-    chomp;
-    my @l = split("\t",$_);
-
-    my $foundtrans = 0;
+  next if /^#/;
+  chomp;
+  my @l = split("\t",$_);
+  
+  my $foundtrans = 0;
+  
+  my ($chr1,$pos1,$chr2,$pos2,$type);
+  
+  if (/SVTYPE=BND/){
+    $type = "translocation";
+    ($chr1,$pos1) = @l[0..1];
+    $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
+    $chr2 = $1;
+    $pos2 = $2;
+  } elsif (/SVTYPE=(INV|DEL|DUP|INS)/){
+    $type = lc($1);
+    ($chr1,$pos1) = @l[0..1];
+    $chr2 = $chr1;
+    $l[6] =~ /END=(\d+)/;
+    $pos2 = $2;
+  }
+  
+  my @t = lookup_translocation($chr1,$pos1,$chr2,$pos2,$slop,\%trans);
+  if (scalar @t > 0){
     
-    my ($chr1,$pos1,$chr2,$pos2,$type);
+    my @p1 = lookup_bed($chr1,$pos1,\%bands);
+    my @p2 = lookup_bed($chr2,$pos2,\%bands);
     
-    if (/SVTYPE=BND/){
-	$type = "translocation";
-	($chr1,$pos1) = @l[0..1];
-	$l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
-	$chr2 = $1;
-	$pos2 = $2;
-
-	my @t = lookup_translocation($chr1,$pos1,$chr2,$pos2,$slop,\%trans);
-	if (scalar @t > 0){
-	    
-	    my @p1 = lookup_bed($chr1,$pos1,\%bands);
-	    my @p2 = lookup_bed($chr2,$pos2,\%bands);
-	    
-	    # get support
-	    my @format = split(":",$l[9]);
-	    
-	    $l[9] =~ /^(\d+),(\d+)/;
-	    my $paired_support = "$2/" . ($1+$2);
-	    my $paired_fraction = $2/($2+$1);
-	    
-	    my $split_support = '';
-	    my $split_fraction = '';
-	    if ($l[9] =~ /:(\d+),(\d+)$/){
-		$split_support = "$2/" . ($1+$2);
-		$split_fraction = $2/($2+$1);
-	    }
-	    
-	    my $ci = '';
-	    if ($l[7] =~ /CIPOS=(\S+?);/){
-		$ci = "PRECISION: $1";
-	    }
-	    $l[7] =~ /[^_=]BND_DEPTH=(\d+)/;
-	    my $dp1 = $1;
-	    $l[7] =~ /MATE_BND_DEPTH=(\d+)/;
-	    my $dp2 = $1;	
-	    
-	    foreach my $t (@t){
-		my $c1 = $chr1;
-		$c1 =~ s/chr//;
-		my $c2 = $chr2;
-		$c2 =~ s/chr//;
-		my ($gene1,$gene2) = split("_",$t->{genes});    
-		print join("\t","t(" . $c1 . $p1[0]->{band} . ";" . $c2 . $p2[0]->{band} . ")",
-			   "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
-			   "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-			   "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-			   "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2",
-			   $ci),"\n";
-	    $foundtrans=1;
-	    }
-	    $anytrans++;
-	}
+    # get support
+    
+    my $paired_support = 0;
+    my $paired_fraction = 0.0;    
+    my $split_support = 0;
+    my $split_fraction = 0.0;
+    
+    if ($l[9] =~ /^(\d+),(\d+):(\d+),(\d+)$/){
+      $paired_support = "$2/" . ($1+$2);
+      $paired_fraction = $2/($2+$1);
+      
+      $split_support = "$3/" . ($3+$4);
+      $split_fraction = $3/($3+$4);
     }
     
-    # if not a recurrent translocation, then check quality and report as secondary finding
-    if ($foundtrans == 0 && $l[6] eq 'PASS'){
-	$l[2] =~ /(\S+):\d+$/;
-	my $n = $1;
-	my $chr1 = $l[0];
-	my $pos1 = $l[1];
-	my $chr2 = '';
-	my $pos2 = '';
-
-	my $type = '';
-	
-	if ($l[2] =~ /BND/){
-	    $type = "BND";
-	    $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
-	    $chr2 = $1;
-	    $pos2 = $2;
-	} elsif ($l[2] =~ /(DEL|DUP|INS)/){
-	    $type = $1;
-	    $l[7]=~/END=(\d+)/;
-	    $chr2 = $chr1;
-	    $pos2 = $1;
-	}
-	
-	# get support
-	my @format = split(":",$l[9]);
-	
-	$l[9] =~ /^(\d+),(\d+):(\d+),(\d+)/;
-	my $pref = $1;
-	my $palt = $2;
-	my $sref = $3;
-	my $salt = $4;
-	
-	$l[7] =~ /CIPOS=(\S+?);/;
-	my $ci = $1;
-	$l[7] =~ /[^_=]BND_DEPTH=(\d+)/;
-	my $dp1 = $1;
-	$l[7] =~ /MATE_BND_DEPTH=(\d+)/;
-	my $dp2 = $1;
-	
-	my @p1 = lookup_bed($chr1,$pos1,\%bands);
-	$l[7] =~ /CSQ=(\S+)$/;
-	my @a = split(",",$1);
-	my @b = split /\|/, $a[0];
-	my $g = $b[3];
-	my $consequence = $b[1];
-	my $exon = $b[8];
-	my $intron = $b[9];	
-	push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt, $ci, $dp1, $dp2 ];
+    my $ci = '';
+    if ($l[7] =~ /CIPOS=(\S+?);/){
+      $ci = "PRECISION: $1";
     }
+    $l[7] =~ /[^_=]BND_DEPTH=(\d+)/;
+    my $dp1 = $1;
+    $l[7] =~ /MATE_BND_DEPTH=(\d+)/;
+    my $dp2 = $1;	
+    
+    foreach my $t (@t){
+      my $c1 = $chr1;
+      $c1 =~ s/chr//;
+      my $c2 = $chr2;
+      $c2 =~ s/chr//;
+      my ($gene1,$gene2) = split("_",$t->{genes});    
+      print join("\t",$types{$type} . "(" . $c1 . $p1[0]->{band} . ";" . $c2 . $p2[0]->{band} . ")",
+		 "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
+		 "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
+		 "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
+		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2",
+		 $ci),"\n";
+      $foundtrans=1;
+    }
+    $anytrans++;
+  }
+  
+  # if not a recurrent translocation and is not in Hall set, then check quality and report as secondary finding
+  $l[7] =~ /POPFREQ_AF=([0-9.]+)/;
+  my $popfreq = $1;
+  $l[7] =~ /SVLEN=[-]*(\d+)/;
+  my $len = $1;
+  $l[7] =~ /SVTYPE=(BND|DEL|DUP|INS)/;
+  my $svtype = $1; 
+  if ($foundtrans == 0 && $l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS/ && $len > 100000))){   
+    
+    $l[2] =~ /(\S+):\d+$/;
+    my $n = $1;
+    my $chr1 = $l[0];
+    my $pos1 = $l[1];
+    my $chr2 = '';
+    my $pos2 = '';
+    
+    my $type = '';
+    
+    if ($l[7] =~ /SVTYPE=BND/){
+      $type = "BND";
+      $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
+      $chr2 = $1;
+      $pos2 = $2;
+    } elsif ($l[7] =~ /SVTYPE=(DEL|DUP|INS)/){
+      $type = $1;
+      $l[7]=~/END=(\d+)/;
+      $chr2 = $chr1;
+      $pos2 = $1;
+    }
+    
+    my $pref = 0;
+    my $palt = 0;
+    my $sref = 0;
+    my $salt = 0;
+    if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
+      $pref = $1;
+      $palt = $2;
+      $sref = $3;
+      $salt = $4;
+    }
+        
+    my @p1 = lookup_bed($chr1,$pos1,\%bands);
+    $l[7] =~ /CSQ=(\S+)$/;
+    my @a = split(",",$1);
+    my @b = split /\|/, $a[0];
+    my $g = $b[3];
+    my $consequence = $b[1];
+    my $exon = $b[8];
+    my $intron = $b[9];
+
+    if ($type eq "t"){
+      push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt ];
+
+    } elsif ($type =~ /DEL|DUP|INS/){
+      my @p2 = lookup_bed($chr2,$pos2,\%bands);
+      my @genes = ();
+      foreach my $A (@a){
+	my @B = split /\|/, $a[0];
+	push @genes, $B[3] if $B[7] eq "protein_coding";
+      }
+      
+      if (scalar @genes > 10){
+	my @knowngenes = ();
+	map { push @knowngenes, $_ if defined($genelist{$_}) } @genes;
+	$g = int(($pos2 - $pos1) / 1000) . " kbp, ". (scalar @genes) . " genes";
+	$g .= "(including: " . join(",",@knowngenes) . ")" if scalar @knowngenes > 0;
+      } elsif (scalar @genes > 0) {
+	$g = int(($pos2 - $pos1) / 1000) . " kbp, genes: ". join(", ",@genes);
+      } else {
+	$g = int(($pos2 - $pos1) / 1000) . " kbp";
+      }
+      push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt ];
+      push @{$t2{$n}}, [ $chr2, $pos2, $p2[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt ];
+    }
+    
+  }
 }
 
 if ($anytrans == 0){
-    print "***NO TRANSLOCATIONS IDENTIFIED***\n\n" 
+  print "***NO TRANSLOCATIONS IDENTIFIED***\n\n" 
 } else {
-    print "\n\n";
+  print "\n\n";
 }
 
-
 print "Gene-level hotspot analysis\n\n";
-
 
 my @out = ();
 open(F,$variants) || die;
@@ -306,7 +343,7 @@ my @list1 = ();
 my @list2 = ();    
 
 map { 
-  (scalar @{$t2{$_}} == 2 and ($genelist{$t2{$_}->[0][4]}>1 or $genelist{$t2{$_}->[1][4]}>1)) ? 
+  (($genelist{$t2{$_}->[0][4]}>1 or $genelist{$t2{$_}->[1][4]}>1)) ? 
     push @list1, $_ : push @list2, $_ } (sort { $t2{$a}->[0][0] cmp $t2{$b}->[0][0] } keys %t2);
 
 if (scalar (@list1) > 0){
@@ -320,7 +357,12 @@ if (scalar (@list1) > 0){
   exit;
 }
 
-my @list = (@list1,"space",@list2);
+my @list = ();
+if (scalar @list1 > 0){
+  @list = (@list1,"space",@list2);
+} elsif (scalar @list2 > 0){
+  @list = @list2;
+}
 
 foreach my $v (@list){
   
@@ -328,16 +370,16 @@ foreach my $v (@list){
     print "\n\nOther findings\n\n";
     next;
   }
+
+  next if scalar @{$t2{$v}} != 2;
   
-  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1,$ci1,$dp11,$dp12) = @{$t2{$v}->[0]};
-  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2,$ci2,$dp21,$dp22) = @{$t2{$v}->[1]};
-  my $paired_support = sprintf("%d",($palt1 + $palt2) / 2);
-  my $paired_fraction = ($palt1 + $palt2) / ($palt1 + $pref1 + $palt2 + $pref2);
-  my $split_support = sprintf("%d",($salt1 + $salt2) / 2);
-  my $split_fraction = ($salt1 + $salt2) / ($salt1 + $sref1 + $salt2 + $sref2);
-  my $ci = sprintf("%.1f",($ci1 + $ci2) / 2);
-  my $dp1 = sprintf("%d",($dp11 + $dp22) / 2);
-  my $dp2 = sprintf("%d",($dp12 + $dp21) / 2);
+  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1) = @{$t2{$v}->[0]};
+  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2) = @{$t2{$v}->[1]};
+
+  my $paired_support = sprintf("%d",($palt1 + $palt2) / 2) . "/" . ($palt1 + $pref1 + $palt2 + $pref2) ;
+  my $paired_fraction = ((($pref1 + $pref2) > 0) ? ($palt1 + $palt2) / ($palt1 + $pref1 + $palt2 + $pref2) : 0.0);
+  my $split_support = sprintf("%d",($salt1 + $salt2) / 2) . "/" . ($salt1 + $sref1 + $salt2 + $sref2);
+  my $split_fraction = ( (($sref1 + $sref2) > 0) ? ($salt1 + $salt2) / ($salt1 + $sref1 + $salt2 + $sref2) : 0.0);
   
   $exon1 = "exon $1" if ($exon1 =~ /(\d+)\/\d+/);
   $exon2 = "exon $1" if ($exon2 =~ /(\d+)\/\d+/);    
@@ -365,14 +407,12 @@ foreach my $v (@list){
     print join("\t","t(" . ($chr1=~/chr(\S+)/)[0] . $b1 . ";" . ($chr2=~/chr(\S+)/)[0] . $b2 . ")",
 	       "$consequence1--$consequence2","$chr1:$pos1;$chr2:$pos2",
 	       "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-	       "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2"),"\n";
+	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")"),"\n";
   } else {
     
     print join("\t",lc($type1) . "(" . $chr1 . $b1 . "-" . $chr2 . $b2 . ")",
-	       "$g1($exon1$intron1, $consequence1)--$g2($exon2$intron2, $consequence2)","$chr1:$pos1;$chr2:$pos2",
+	       "$g1","$chr1:$pos1-$pos2",
 	       "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-	       "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2"),"\n";    
+	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")"),"\n";    
   }
 }

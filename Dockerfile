@@ -149,6 +149,7 @@ COPY docm_and_coding_indel_selection.pl /usr/local/bin/docm_and_coding_indel_sel
 COPY addReadCountsToVcfCRAM.py /usr/local/bin/addReadCountsToVcfCRAM.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
 COPY ChromoSeq.hg38.bed /opt/files/ChromoSeq.hg38.bed
+COPY GeneRegions.bed /opt/files/GeneRegions.bed
 COPY ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe /opt/files/ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe
 COPY ChromoSeqReporter.hg38.pl /usr/local/bin/ChromoSeqReporter.hg38.pl
 COPY BlatContigs.pl /usr/local/bin/BlatContigs.pl
@@ -173,3 +174,8 @@ RUN conda install -y -c bioconda cyvcf2
 RUN conda install -c bioconda deeptools
 
 RUN conda install -c bioconda mosdepth
+
+RUN export PATH=$PATH:/opt/conda/bin/ && \
+    /bin/bash -c "source activate python2 && conda install -c bioconda svtools && source deactivate"
+
+COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz

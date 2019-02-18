@@ -11,7 +11,7 @@ my $junctionComp = .7;
 my $junctionLength = 10;
 my $contigComp = .35;
 my $blatAligned = 20;
-my $blatIdentity = 95;
+my $blatIdentity = 97;
 
 my $REF = '';
 
@@ -28,7 +28,7 @@ die "no reference supplied" if !$REF;
 
 my $out = $ARGV[1];
 
-open(M,"zcat $ARGV[0] |") || die "Cant open manta file $ARGV[0]";
+open(M,$ARGV[0]) || die "Cant open manta file $ARGV[0]";
 
 open(FA,">/tmp/input.fa") || die "cant make temporary fasta file";
 my %seqs = ();
@@ -39,7 +39,7 @@ while(<M>){
 
     # must have minimum PR and SR reads
     next unless $F[8] =~ /PR/ and $F[8] =~ /SR/;
-    $F[9] =~ /(\d+),(\d+):(\d+),(\d+)/;
+    $F[9] =~ /(\d+),(\d+):(\d+),(\d+)$/;
     next unless $2 > $PR and $4 > $SR;
 
     # if junction has low nucleotide complexity
@@ -70,7 +70,7 @@ print STDERR "Done getting contigs. Now mapping...\n";
 
 `/usr/local/bin/blat -fastMap -noHead $REF /tmp/input.fa /tmp/out.psl && /usr/bin/perl /usr/local/bin/pslScore.pl /tmp/out.psl > /tmp/map.out`;
 
-my %map1 = ();
+my %map = ();
 open(MAP,"/tmp/map.out");
 while(<MAP>){
     chomp;
@@ -79,96 +79,72 @@ while(<MAP>){
     # require a minimum percent identity of 95 and a minimum fraction aligned of 20%
     next unless $F[6] > $blatAligned && $F[8] > $blatIdentity;
     my $id = $F[3];
-    $id =~ s/:\d+-\d+$//;
-    push @{$map1{$id}}, [ $F[7], $F[0], $F[1], $F[2] ];
+    push @{$map{$id}}, [ $F[7], $F[0], $F[1], $F[2] ];
 }
 close MAP;
-
-my %map = ();
-foreach my $k (keys %map1){
-#    print STDERR $k,"\t",(scalar @{$map1{$k}}),"\n";
-    @{$map{$k}} = (sort { $b->[0] <=> $a->[0] } @{$map1{$k}})[0..1];
-}
 
 print STDERR "Done mapping. Finding hits...\n";
 
 open(O,">$out") || die;
 
-open(M,"zcat $ARGV[0] |") || die "Cant open manta file $ARGV[0]";
+open(M,$ARGV[0]) || die "Cant open manta file $ARGV[0]";
 while(<M>){
-    if (/^##FILTER/){
-	do {
-	    print O;
-	    $_ = <M>;
-	} while(/^##FILTER/);	
-	print O '##FILTER=<ID=LowReads,Description="Failed minimum number of PR or SR reads">',"\n";
-	print O '##FILTER=<ID=NoContig,Description="No contig">',"\n";
-	print O '##FILTER=<ID=FailedBlat,Description="Blat of contig failed to reproduce breakends">',"\n";
-	next;
-    } elsif (/^#/){
-	print O;
-	next;
+  if (/^##FILTER/){
+    do {
+      print O;
+      $_ = <M>;
+    } while(/^##FILTER/);	
+    print O '##FILTER=<ID=LowReads,Description="Failed minimum number of PR or SR reads">',"\n";
+    print O '##FILTER=<ID=NoContig,Description="No contig">',"\n";
+    print O '##FILTER=<ID=FailedBlat,Description="Blat of contig failed to reproduce breakends">',"\n";
+    next;
+  } elsif (/^#/){
+    print O;
+    next;
+  }
+  
+  chomp;
+  my @F = split("\t",$_);
+  
+  if ($F[8] !~ /PR/ or $F[8] !~ /SR/ or ($F[9] =~ /(\d+),(\d+):(\d+),(\d+)/ and ($2 < $PR or $4 < $SR))){
+    $F[6] = "LowReads";
+    
+  } elsif ($F[7] !~ /CONTIG=/ or !defined($map{$F[2]})){
+    $F[6] = "NoContig";
+    
+  } else {
+    
+    my $chr1 = $F[0];
+    my $pos1 = $F[1];
+    my $chr2 = $F[0]; # assign chr2 to same as chr1 for now; change if del/inv/dup/ins
+    
+    my $pos2 = '';
+    
+    if ($F[2] =~ /DEL|INV|DUP|INS/){
+      $F[7] =~/END=(\d+)/;
+      $pos2 = $1;
+      
+    } elsif ($F[2] =~ /BND/) {
+      $F[4] =~/(chr\S+):(\d+)/;
+      $chr2 = $1;
+      $pos2 = $2;
     }
     
-    chomp;
-    my @F = split("\t",$_);
-
-    if ($F[8] !~ /PR/ or $F[8] !~ /SR/ or ($F[9] =~ /(\d+),(\d+):(\d+),(\d+)/ and ($2 < $PR or $4 < $SR))){
-	$F[6] = "LowReads";
-	
-    } elsif ($F[7] !~ /CONTIG=/ or !defined($map{$F[2]})){
-	$F[6] = "NoContig";
-	
-    } else {
-	
-	if ($F[2] =~ /DEL|INV|DUP|INS/){
-	    $F[7] =~/END=(\d+)/;
-
-	    my $chr1 = $F[0];
-	    my $pos1 = $F[1];
-	    my $chr2 = $F[0];
-	    my $pos2 = $1;
-
-	    my $one = 0;
-	    foreach my $i (@{$map{$F[2]}}){
-		$one = 1 if ($i->[0] eq $chr1 && abs($pos1 - $i->[1]) < $slop);
-	    }
-	    my $two = 0;
-	    foreach my $i (@{$map{$F[2]}}){
-		$two = 1 if ($i->[0] eq $chr2 && abs($pos2 - $i->[1]) < $slop);
-	    }
-
-	    if ($one > 0 and $two > 0){
-		$F[6] = "PASS";
-	    } else {
-		$F[6] = "FailedBlat";
-	    }
-	    
-	} elsif ($F[2] =~ /BND/) {
-	    $F[4] =~/(chr\S+):(\d+)/;
-
-	    my $chr1 = $F[0];
-	    my $pos1 = $F[1];
-	    my $chr2 = $1;
-	    my $pos2 = $2;
-
-	    my $one = 0;
-	    foreach my $i (@{$map{$F[2]}}){
-		$one = 1 if ($i->[1] eq $chr1 && abs($pos1 - $i->[2]) < $slop);
-	    }
-	    my $two = 0;
-	    foreach my $i (@{$map{$F[2]}}){
-		$two = 1 if ($i->[1] eq $chr2 && abs($pos2 - $i->[2]) < $slop);
-	    }
-
-	    if ($one > 0 and $two > 0){
-		$F[6] = "PASS";
-	    } else {
-		$F[6] = "FailedBlat";
-	    }
-	}
+    my $one = 0;
+    my $two = 0;
+    foreach my $i (@{$map{$F[2]}}){
+      $one = 1 if ($i->[1] eq $chr1 && abs($pos1 - $i->[2]) < $slop);
+      $two = 1 if ($i->[1] eq $chr2 && abs($pos2 - $i->[2]) < $slop);
     }
-    print O join("\t",@F),"\n";
+    
+    if ($one > 0 and $two > 0){
+      $F[6] = "PASS";
+    } else {
+      $F[6] = "FailedBlat";
+    }
+  }
+  
+  print O join("\t",@F),"\n";
 }
 close M;
 close O;
