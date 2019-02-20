@@ -138,6 +138,26 @@ RUN perl INSTALL.pl --NO_UPDATE
 WORKDIR /
 RUN ln -s /opt/vep/ensembl-vep/vep /usr/bin/variant_effect_predictor.pl
 
+
+RUN conda install -y -c bioconda cyvcf2 htslib samtools deeptools mosdepth
+
+RUN export PATH=$PATH:/opt/conda/bin/ && \
+    /bin/bash -c "source activate python2 && conda install -c bioconda svtools && source deactivate"
+
+#
+# Cleanup
+#
+
+## Clean up
+RUN cd / && \
+   rm -rf /tmp/* && \
+   apt-get autoremove -y && \
+   apt-get autoclean -y && \
+   rm -rf /var/lib/apt/lists/* && \
+   apt-get clean && \
+   rm -f /opt/*.bz2 /opt/*.gz
+   
+
 RUN mkdir -p /opt/lib/perl/VEP/Plugins && chmod a+wrx /opt/lib/perl/VEP/Plugins 
 COPY Downstream.pm /opt/lib/perl/VEP/Plugins/Downstream.pm
 COPY Wildtype.pm /opt/lib/perl/VEP/Plugins/Wildtype.pm
@@ -155,27 +175,9 @@ COPY ChromoSeqReporter.hg38.pl /usr/local/bin/ChromoSeqReporter.hg38.pl
 COPY BlatContigs.pl /usr/local/bin/BlatContigs.pl
 COPY pslScore.pl /usr/local/bin/pslScore.pl
 COPY hg38.blacklist.merged.bed /opt/files/hg38.blacklist.merged.bed
-
-#
-# Cleanup
-#
-
-## Clean up
-RUN cd / && \
-   rm -rf /tmp/* && \
-   apt-get autoremove -y && \
-   apt-get autoclean -y && \
-   rm -rf /var/lib/apt/lists/* && \
-   apt-get clean && \
-   rm -f /opt/*.bz2 /opt/*.gz 
-
-RUN conda install -y -c bioconda cyvcf2
-
-RUN conda install -c bioconda deeptools
-
-RUN conda install -c bioconda mosdepth
-
-RUN export PATH=$PATH:/opt/conda/bin/ && \
-    /bin/bash -c "source activate python2 && conda install -c bioconda svtools && source deactivate"
-
 COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz
+COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
+COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
+
+RUN chmod a+wrx /opt/files/*
+RUN chmod a+wrx /usr/local/bin/*

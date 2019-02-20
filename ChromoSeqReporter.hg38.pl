@@ -60,14 +60,14 @@ print "Copy number alterations:\n\n";
 my $anycnvs = 0;
 
 open(F,$cnvs) || die "cant open file: $cnvs";
-my $gender = <F>;
-chomp $gender;
+#my $gender = <F>;
+#chomp $gender;
 
 while(<F>){
     chomp;
     my ($chr,$start,$end,$segs,$l2r,$cn,$change,$bands,$band_count,$arms,$arm_count,$genes) = split("\t",$_);
 
-    next if ($gender eq 'male' and $chr eq 'chrX' and $segs > 150 and $change eq 'HETD');
+#    next if ($gender eq 'male' and $chr eq 'chrX' and $segs > 150 and $change eq 'HETD');
     
     my $c = $chr;
     $c =~ s/chr//g;
@@ -188,14 +188,16 @@ while(<T>){
     my $split_support = 0;
     my $split_fraction = 0.0;
     
-    if ($l[9] =~ /^(\d+),(\d+):(\d+),(\d+)$/){
+    if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
       $paired_support = "$2/" . ($1+$2);
-      $paired_fraction = $2/($2+$1);
-      
+      $paired_fraction = $2/($2+$1);    
       $split_support = "$3/" . ($3+$4);
       $split_fraction = $3/($3+$4);
     }
-    
+
+    $l[7] =~ /POPFREQ_AF=(\S+?);/;
+    my $popfreq = $1 * 100 . "%";
+	  
     my $ci = '';
     if ($l[7] =~ /CIPOS=(\S+?);/){
       $ci = "PRECISION: $1";
@@ -215,8 +217,7 @@ while(<T>){
 		 "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
 		 "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
 		 "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2",
-		 $ci),"\n";
+		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","population frequency: " . $popfreq),"\n";
       $foundtrans=1;
     }
     $anytrans++;
@@ -227,9 +228,9 @@ while(<T>){
   my $popfreq = $1;
   $l[7] =~ /SVLEN=[-]*(\d+)/;
   my $len = $1;
-  $l[7] =~ /SVTYPE=(BND|DEL|DUP|INS)/;
+  $l[7] =~ /SVTYPE=(BND|DEL|DUP|INV|INS)/;
   my $svtype = $1; 
-  if ($foundtrans == 0 && $l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS/ && $len > 100000))){   
+  if ($foundtrans == 0 && $l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > 100000))){   
     
     $l[2] =~ /(\S+):\d+$/;
     my $n = $1;
@@ -245,7 +246,7 @@ while(<T>){
       $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
       $chr2 = $1;
       $pos2 = $2;
-    } elsif ($l[7] =~ /SVTYPE=(DEL|DUP|INS)/){
+    } elsif ($l[7] =~ /SVTYPE=(DEL|DUP|INS|INV)/){
       $type = $1;
       $l[7]=~/END=(\d+)/;
       $chr2 = $chr1;
@@ -272,10 +273,10 @@ while(<T>){
     my $exon = $b[8];
     my $intron = $b[9];
 
-    if ($type eq "t"){
+    if ($type eq "BND"){
       push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt ];
 
-    } elsif ($type =~ /DEL|DUP|INS/){
+    } elsif ($type =~ /DEL|DUP|INV|INS/){
       my @p2 = lookup_bed($chr2,$pos2,\%bands);
       my @genes = ();
       foreach my $A (@a){
@@ -284,10 +285,10 @@ while(<T>){
       }
       
       if (scalar @genes > 10){
-	my @knowngenes = ();
-	map { push @knowngenes, $_ if defined($genelist{$_}) } @genes;
+	my %knowngenes = ();
+	map { $knowngenes{$_} = 1 if defined($genelist{$_}) } @genes;
 	$g = int(($pos2 - $pos1) / 1000) . " kbp, ". (scalar @genes) . " genes";
-	$g .= "(including: " . join(",",@knowngenes) . ")" if scalar @knowngenes > 0;
+	$g .= " (including: " . join(",",sort keys %knowngenes) . ")" if scalar keys %knowngenes > 0;
       } elsif (scalar @genes > 0) {
 	$g = int(($pos2 - $pos1) / 1000) . " kbp, genes: ". join(", ",@genes);
       } else {
@@ -347,10 +348,10 @@ map {
     push @list1, $_ : push @list2, $_ } (sort { $t2{$a}->[0][0] cmp $t2{$b}->[0][0] } keys %t2);
 
 if (scalar (@list1) > 0){
-  print "\n\nOther structural variants that involve known genes\n\n";
+  print "\n\Previously unreported high-confidence structural variants that involve known genes\n\n";
   
 } elsif (scalar (@list2) > 0) {
-  print "\n\nOther findings\n\n";
+  print "\n\nPreviously unreported high-confidence structural variants\n\n";
 
 } else {
   print "No other findings identified\n\n";
@@ -367,7 +368,7 @@ if (scalar @list1 > 0){
 foreach my $v (@list){
   
   if ($v eq 'space' and scalar @list2 > 0){
-    print "\n\nOther findings\n\n";
+    print "\n\nPreviously unreported high-confidence structural variants\n\n";
     next;
   }
 
@@ -376,10 +377,17 @@ foreach my $v (@list){
   my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1) = @{$t2{$v}->[0]};
   my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2) = @{$t2{$v}->[1]};
 
-  my $paired_support = sprintf("%d",($palt1 + $palt2) / 2) . "/" . ($palt1 + $pref1 + $palt2 + $pref2) ;
-  my $paired_fraction = ((($pref1 + $pref2) > 0) ? ($palt1 + $palt2) / ($palt1 + $pref1 + $palt2 + $pref2) : 0.0);
-  my $split_support = sprintf("%d",($salt1 + $salt2) / 2) . "/" . ($salt1 + $sref1 + $salt2 + $sref2);
-  my $split_fraction = ( (($sref1 + $sref2) > 0) ? ($salt1 + $salt2) / ($salt1 + $sref1 + $salt2 + $sref2) : 0.0);
+  if ($type1 eq 'BND'){
+    $pref1 = $pref1 + $pref2;
+    $palt1 = $palt1 + $palt2;
+    $sref1 = $sref1 + $sref2;
+    $salt1 = $salt1 + $salt2;
+  }
+  
+  my $paired_support = $palt1 . "/" . ($palt1 + $pref1) ;
+  my $paired_fraction = $palt1 / ($palt1 + $pref1);
+  my $split_support = $salt1 . "/" . ($salt1 + $sref1);
+  my $split_fraction = $salt1 / ($salt1 + $sref1);
   
   $exon1 = "exon $1" if ($exon1 =~ /(\d+)\/\d+/);
   $exon2 = "exon $1" if ($exon2 =~ /(\d+)\/\d+/);    
