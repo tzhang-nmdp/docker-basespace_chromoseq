@@ -109,15 +109,6 @@ workflow ChromoSeq {
     jobGroup=JobGroup
   }
   
-#  call subset_cram {
-#    input: Cram=Cram,
-#    CramIndex=CramIndex,
-#    Bed=CoverageBed,
-#    refFasta=Reference,
-#    Name=Name,
-#    jobGroup=JobGroup
-#  }
-  
   call combine_variants {
     input: VarscanSNV=run_varscan.varscan_snv_file,
     VarscanIndel=run_varscan.varscan_indel_file,
@@ -206,9 +197,7 @@ task cov_qc {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "4"
-    memory_gb: "32"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=50, mem=32000]"
+    memory: "32 G"
     job_group: jobGroup
   }
   
@@ -244,9 +233,7 @@ task run_manta {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "8"
-    memory_gb: "32"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=50, mem=32000]"
+    memory: "32 G"
     job_group: jobGroup
   }
   output {
@@ -280,7 +267,6 @@ task run_ichor {
        --estimateNormal True --estimatePloidy True --estimateScPrevalence False \
        --txnE 0.9999 --txnStrength 10000 --genomeStyle UCSC --outDir ./ && \
        awk -v OFS="\t" '$7!=2 && NR>1 { print $2,$3,$4,$5,$6,$7,$8,$9; }' "${Name}.seg.txt" > results.bed && \
-#       awk '/gender/ { print $NF; }' stderr > "${Name}.cnv_report.txt" && \
        if [[ -s results.bed ]]; then /usr/local/bin/intersectBed -a results.bed -b ${Bed} -wa -wb | \
        /usr/local/bin/bedtools groupby -g 1,2,3,4,5,6,7 -c 12,12,13,13,14 -o distinct,count_distinct,distinct,count_distinct,distinct >> "${Name}.cnv_report.txt"; else touch "${Name}.cnv_report.txt"; fi && \
        awk -v OFS="\t" '{ color="255,0,0"; if ($5>0){ color="0,0,255"; } n=split($8,a,","); print $1,$2,$3,$7"("a[0]"-"a[n]")",".",".",$2,$3,color; }' "${Name}.cnv_report.txt" > "${Name}.cnv.bed" && \
@@ -290,9 +276,7 @@ task run_ichor {
      runtime {
               docker_image: "dhspence/docker-chromoseq"
               cpu: "1"
-   	      memory_gb: "16"
-              queue: "research-hpc"
-              resource: "rusage[gtmp=500, mem=16000]"
+   	      memory: "16 G"
               job_group: jobGroup
      }
 
@@ -316,11 +300,7 @@ task run_varscan {
   String refFasta
   String Name
   String jobGroup
-  
-  String? project
-  String? queue = "research-hpc"
-  Int? priority
-  
+    
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta}".gz" -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
@@ -332,9 +312,7 @@ task run_varscan {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "2"
-    memory_gb: "16"
-    queue: queue
-    resource: "rusage[gtmp=50, mem=16000]"
+    memory: "16 G"
     job_group: jobGroup
   }
   output {
@@ -363,9 +341,7 @@ task run_pindel_region {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "16"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=10, mem=16000]"
+    memory: "16 G"
     job_group: jobGroup
   }
   output {
@@ -391,9 +367,7 @@ task run_platypus {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "32"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=10, mem=32000]"
+    memory: "32 G"
     job_group: jobGroup
   }
   output {
@@ -417,9 +391,7 @@ task subset_cram {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "16"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=50, mem=16000]"
+    memory: "16 G"
     job_group: jobGroup
   }
   
@@ -447,9 +419,7 @@ task make_bw {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "4"
-    memory_gb: "32"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=50, mem=32000]"
+    memory: "32 G"
     job_group: jobGroup
   }
   output {
@@ -478,9 +448,7 @@ task combine_variants {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "10"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=10, mem=10000]"
+    memory: "10 G"
     job_group: jobGroup
   }
   output {
@@ -518,9 +486,7 @@ task annotate_variants {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "10"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=10, mem=10000]"
+    memory: "10 G"
     job_group: jobGroup
   }
   output {
@@ -531,6 +497,7 @@ task annotate_variants {
 }
 
 task annotate_svs {
+  
   String Vcf
   String refFasta
   String Vepcache
@@ -548,9 +515,7 @@ task annotate_svs {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory_gb: "10"
-    queue: "research-hpc"
-    resource: "rusage[gtmp=10, mem=10000]"
+    memory: "10 G"
     job_group: jobGroup
   }
   
@@ -576,7 +541,6 @@ task make_report {
   
   runtime {
     docker_image: "dhspence/docker-chromoseq"
-    queue: "research-hpc"
     job_group: jobGroup
   }
   
@@ -606,7 +570,6 @@ task make_igv {
   
   runtime {
     docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
-    queue: "research-hpc"
   }
   
   output {
@@ -615,48 +578,46 @@ task make_igv {
 }
 
 task remove_files {
-     Array[File] files
-     String order_by
-     String jobGroup
-
-     command {
-               /bin/rm ${sep=" " files}
-     }
-     runtime {
-               docker_image: "ubuntu:xenial"
-               queue: "research-hpc"
-               job_group: jobGroup
-     }
-     output {
-               String out = stdout()
-     }
+  Array[String] files
+  String order_by
+  String jobGroup
+  
+  command {
+    /bin/rm ${sep=" " files}
+  }
+  runtime {
+    docker_image: "ubuntu:xenial"
+    job_group: jobGroup
+  }
+  output {
+    String out = stdout()
+  }
 }
 
 task gather_files {
-     Array[File] OutputFiles
-     String OutputDir
-     String jobGroup
-
-     command {
-             /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
+  Array[String] OutputFiles
+  String OutputDir
+  String jobGroup
+  
+  command {
+    /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
      }
      runtime {
-             docker_image: "ubuntu:xenial"
-             queue: "research-hpc"
-             job_group: jobGroup
+       docker_image: "ubuntu:xenial"
      }
      output {
-            String out = stdout()
+       String out = stdout()
      }
 }
 
 task return_object {
-     Array[Object] obj
-     command {
-     	     cat ${write_objects(obj)} > "obj.tsv"
-     }
-
-     output {
-     	    File results = "obj.tsv"
-     }
+  Array[Object] obj
+  command {
+    cat ${write_objects(obj)} > "obj.tsv"
+  }
+  
+  output {
+    File results = "obj.tsv"
+  }
+  
 }
