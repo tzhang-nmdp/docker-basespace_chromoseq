@@ -159,6 +159,7 @@ workflow ChromoSeq {
     run_ichor.genomewide_pdf,
     run_ichor.report,
     run_ichor.bed,
+    run_ichor.correct_pdf,
     gene_qc.qc_out,
     gene_qc.region_dist,
     gene_qc.global_dist,
@@ -286,7 +287,8 @@ task run_ichor {
        File bed = "${Name}.cnv.bed"
        File report = "${Name}.cnv_report.txt"
        File genomewide_pdf = "${Name}_genomeWide.pdf"
-       File allgenomewide_pdf = "${Name}_genomeWide_all_sols.pdf"	      
+       File allgenomewide_pdf = "${Name}_genomeWide_all_sols.pdf"
+       File correct_pdf = "${Name}_correct.pdf"	      
      }
 }
 
@@ -486,7 +488,7 @@ task annotate_variants {
   runtime {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
-    memory: "10 G"
+    memory: "32 G"
     job_group: jobGroup
   }
   output {
