@@ -80,7 +80,7 @@ RUN ln -s /opt/pindel-0.2.5b8/pindel /usr/local/bin/pindel && \
 # Octopus
 ###############
 
-RUN conda install -y -c conda-forge -c bioconda octopus
+#RUN conda install -y -c conda-forge -c bioconda octopus
 
 #
 # GATK
@@ -166,6 +166,7 @@ RUN mkdir /opt/files/
 
 COPY add_annotations_to_table_helper.py /usr/local/bin/add_annotations_to_table_helper.py
 COPY docm_and_coding_indel_selection.pl /usr/local/bin/docm_and_coding_indel_selection.pl
+COPY runIchorCNA.R /usr/local/bin/runIchorCNA.R
 COPY addReadCountsToVcfCRAM.py /usr/local/bin/addReadCountsToVcfCRAM.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
 COPY ChromoSeq.hg38.bed /opt/files/ChromoSeq.hg38.bed
@@ -178,6 +179,16 @@ COPY hg38.blacklist.merged.bed /opt/files/hg38.blacklist.merged.bed
 COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz
 COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
 COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
+COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
+
+#WORKDIR /opt/
+#RUN conda install --yes 'pip' && \
+#    conda clean -tipsy && \
+#    pip install cmake==3.13
+    
+#RUN git clone -b master https://github.com/luntergroup/octopus.git && \
+#    cd octopus && \
+#    /opt/conda/bin/python ./scripts/install.py 

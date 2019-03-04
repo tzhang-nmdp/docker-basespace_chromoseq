@@ -18,14 +18,16 @@ sub lookup_translocation {
     my ($c1,$p1,$c2,$p2,$slop,$h) = @_;
 
     my @ret = ();
+    my @oneside = ();
     foreach my $k (keys %{$h}){
 	if ($c1 eq $h->{$k}{chr1} and $p1 > ($h->{$k}{start1} - $slop) and $p1 < ($h->{$k}{end1} + $slop)
 	    and $c2 eq $h->{$k}{chr2} and $p2 > ($h->{$k}{start2} - $slop) and $p2 < ($h->{$k}{end2} + $slop)){
 	    push @ret, $h->{$k};
 	} elsif ($c1 eq $h->{$k}{chr1} and $p1 > ($h->{$k}{start1} - $slop) and $p1 < ($h->{$k}{end1} + $slop) and $h->{$k}{chr2} eq '0'){
-	    push @ret, $h->{$k};
+	    push @oneside, $h->{$k};
 	}	    
     }
+    @ret = @oneside if scalar @ret == 0; # only allow the 'onesided' comparison if there are no twosided ones.
     @ret;      
 }
     
@@ -34,6 +36,9 @@ my $TRANSBED = "/opt/files/ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe";
 
 my $slop = 0;
 my $frac_for_whole_del = 0.75;
+my $lowabundance = 10;
+my $minSVlen = 1000000;
+my $maxSVlen = 5000000;
 
 my %genelist = ();
 
@@ -60,40 +65,45 @@ print "Copy number alterations:\n\n";
 my $anycnvs = 0;
 
 open(F,$cnvs) || die "cant open file: $cnvs";
-#my $gender = <F>;
-#chomp $gender;
 
 while(<F>){
     chomp;
     my ($chr,$start,$end,$segs,$l2r,$cn,$change,$bands,$band_count,$arms,$arm_count,$genes) = split("\t",$_);
 
-#    next if ($gender eq 'male' and $chr eq 'chrX' and $segs > 150 and $change eq 'HETD');
-    
     my $c = $chr;
     $c =~ s/chr//g;
     
     $genes =~ s/^\.,|\.//g;
-
-    if ($change eq 'GAIN'){
+    my $abund = '';
+    
+    if ($l2r > 0){
+	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
 	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){
-	    print "+" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]\n";
+	    print "+" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	   	    
 	} else {
 	    my @bands = split(",",$bands);
-	    print "+" . $c . $bands[0] . '-' . $bands[$#bands] . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]\n";
+	    print "+" . $c . $bands[0] . '-' . $bands[$#bands] . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	}
-    } elsif ($change eq 'HETD'){
+    } elsif ($l2r < 0){
+	$cn = 1 if $cn > 2;
+	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
 	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){
-	    print "-" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]\n";
+	    print "-" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	} else {
 	    my @bands = split(",",$bands);
-	    print "del(" . $c . $bands[0] . '-' . $bands[$#bands] . ")\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]\n";
+	    print "del(" . $c . $bands[0] . '-' . $bands[$#bands] . ")\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	    
 	}
+    }
+    if ($abund < $lowabundance){
+	print "\t*** LOW ABUNDANCE FINDING ***\n";
+    } else {
+	print "\n";
     }
     $anycnvs++;
 }
@@ -150,12 +160,16 @@ my %types = ("translocation" => "t",
 	     "inv" => "inv",
 	     "del"=> "del",
 	     "dup" => "dup");
+
+my %isknown = ();
     
 open(T,"gunzip -c $translocations |") || die;
 while(<T>){
   next if /^#/;
   chomp;
   my @l = split("\t",$_);
+
+  my $id = $l[2];
   
   my $foundtrans = 0;
   
@@ -171,8 +185,8 @@ while(<T>){
     $type = lc($1);
     ($chr1,$pos1) = @l[0..1];
     $chr2 = $chr1;
-    $l[6] =~ /END=(\d+)/;
-    $pos2 = $2;
+    $l[7] =~ /END=(\d+)/;
+    $pos2 = $1;
   }
   
   my @t = lookup_translocation($chr1,$pos1,$chr2,$pos2,$slop,\%trans);
@@ -212,13 +226,13 @@ while(<T>){
       $c1 =~ s/chr//;
       my $c2 = $chr2;
       $c2 =~ s/chr//;
-      my ($gene1,$gene2) = split("_",$t->{genes});    
+      my ($gene1,$gene2) = split("_",$t->{genes});
       print join("\t",$types{$type} . "(" . $c1 . $p1[0]->{band} . ";" . $c2 . $p2[0]->{band} . ")",
 		 "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
 		 "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
 		 "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
 		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","population frequency: " . $popfreq),"\n";
-      $foundtrans=1;
+      $isknown{$id} = 1;
     }
     $anytrans++;
   }
@@ -230,10 +244,8 @@ while(<T>){
   my $len = $1;
   $l[7] =~ /SVTYPE=(BND|DEL|DUP|INV|INS)/;
   my $svtype = $1; 
-  if ($foundtrans == 0 && $l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > 100000))){   
+  if ($l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > $minSVlen))){   
     
-    $l[2] =~ /(\S+):\d+$/;
-    my $n = $1;
     my $chr1 = $l[0];
     my $pos1 = $l[1];
     my $chr2 = '';
@@ -258,44 +270,49 @@ while(<T>){
     my $sref = 0;
     my $salt = 0;
     if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
-      $pref = $1;
-      $palt = $2;
-      $sref = $3;
-      $salt = $4;
+	$pref = $1;
+	$palt = $2;
+	$sref = $3;
+	$salt = $4;
     }
-        
+    
     my @p1 = lookup_bed($chr1,$pos1,\%bands);
     $l[7] =~ /CSQ=(\S+)$/;
-    my @a = split(",",$1);
-    my @b = split /\|/, $a[0];
-    my $g = $b[3];
-    my $consequence = $b[1];
-    my $exon = $b[8];
-    my $intron = $b[9];
+    my @csq = split(",",$1);
+    my @fields = split /\|/, $csq[0];
+    my $g = $fields[3];
+    my $consequence = $fields[1];
+    my $exon = $fields[8];
+    my $intron = $fields[9];
 
     if ($type eq "BND"){
-      push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt ];
-
+	$l[7] =~ /MATEID=([^;]+)/;
+	my $mateid = $1;	
+	$t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt, $id, $mateid, $isknown{$id} ];
+	
     } elsif ($type =~ /DEL|DUP|INV|INS/){
-      my @p2 = lookup_bed($chr2,$pos2,\%bands);
-      my @genes = ();
-      foreach my $A (@a){
-	my @B = split /\|/, $a[0];
-	push @genes, $B[3] if $B[7] eq "protein_coding";
-      }
-      
-      if (scalar @genes > 10){
-	my %knowngenes = ();
-	map { $knowngenes{$_} = 1 if defined($genelist{$_}) } @genes;
-	$g = int(($pos2 - $pos1) / 1000) . " kbp, ". (scalar @genes) . " genes";
-	$g .= " (including: " . join(",",sort keys %knowngenes) . ")" if scalar keys %knowngenes > 0;
-      } elsif (scalar @genes > 0) {
-	$g = int(($pos2 - $pos1) / 1000) . " kbp, genes: ". join(", ",@genes);
-      } else {
-	$g = int(($pos2 - $pos1) / 1000) . " kbp";
-      }
-      push @{$t2{$n}}, [ $chr1, $pos1, $p1[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt ];
-      push @{$t2{$n}}, [ $chr2, $pos2, $p2[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt ];
+	
+	next if $type =~ /DEL|DUP/ and $pos2 - $pos1 > $maxSVlen; # skip if its a huge del/dup since we have CNV analysis for this
+	
+	my @p2 = lookup_bed($chr2,$pos2,\%bands);
+	my %genes = ();
+	foreach my $c (@csq){
+	    my @f = split /\|/, $c;
+	    $genes{$f[3]} = 1 if $f[7] eq "protein_coding";
+	}
+	
+	if (scalar keys %genes > 10){
+	    my %knowngenes = ();
+	    map { $knowngenes{$_} = 1 if defined($genelist{$_}) } keys %genes;
+	    $g = int(($pos2 - $pos1) / 1000) . " kbp, ". (scalar keys %genes) . " genes";
+	    $g .= " (including: " . join(",",sort keys %knowngenes) . ")" if scalar keys %knowngenes > 0;
+	} elsif (scalar keys %genes > 0) {
+	    $g = int(($pos2 - $pos1) / 1000) . " kbp, genes: ". join(", ",sort keys %genes);
+	} else {
+	    $g = int(($pos2 - $pos1) / 1000) . " kbp";
+	}
+        $t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id, $id . "-END", $isknown{$id} ];
+	$t2{$id . "-END"} = [ $chr2, $pos2, $p2[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id . "-END", $id, $isknown{$id} ];
     }
     
   }
@@ -341,11 +358,11 @@ if (scalar @out > 0){
 #
 
 my @list1 = ();
-my @list2 = ();    
+my @list2 = ();
 
 map { 
-  (($genelist{$t2{$_}->[0][4]}>1 or $genelist{$t2{$_}->[1][4]}>1)) ? 
-    push @list1, $_ : push @list2, $_ } (sort { $t2{$a}->[0][0] cmp $t2{$b}->[0][0] } keys %t2);
+  (($genelist{$t2{$_}[4]}>1)) ? 
+    push @list1, $_ : push @list2, $_ } (sort { $t2{$a}[0] cmp $t2{$b}[0] } keys %t2);
 
 if (scalar (@list1) > 0){
   print "\n\Previously unreported high-confidence structural variants that involve known genes\n\n";
@@ -358,6 +375,9 @@ if (scalar (@list1) > 0){
   exit;
 }
 
+# sort by SV type
+@list2 = sort { $t2{$a}[3] cmp $t2{$b}[3] } @list2;
+
 my @list = ();
 if (scalar @list1 > 0){
   @list = (@list1,"space",@list2);
@@ -365,18 +385,25 @@ if (scalar @list1 > 0){
   @list = @list2;
 }
 
+my $svt = '';
+
 foreach my $v (@list){
+
+  next if defined($t2{$v}[14]) and $t2{$v}[14] ne '';
   
   if ($v eq 'space' and scalar @list2 > 0){
     print "\n\nPreviously unreported high-confidence structural variants\n\n";
     next;
+  } elsif ($svt ne '' and $t2{$v}[3] ne $svt){
+      print "\n";
   }
 
-  next if scalar @{$t2{$v}} != 2;
+  $svt = $t2{$v}[3];
   
-  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1) = @{$t2{$v}->[0]};
-  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2) = @{$t2{$v}->[1]};
+  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1) = @{$t2{$v}};
+  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2) = @{$t2{$t2{$v}[13]}};
 
+  
   if ($type1 eq 'BND'){
     $pref1 = $pref1 + $pref2;
     $palt1 = $palt1 + $palt2;
@@ -423,4 +450,5 @@ foreach my $v (@list){
 	       "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
 	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")"),"\n";    
   }
+
 }
