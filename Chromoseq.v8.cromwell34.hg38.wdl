@@ -33,23 +33,23 @@ workflow ChromoSeq {
     jobGroup=JobGroup
   }
   
-#  call cov_qc as gene_qc {
-#    input: Cram=subset_cram.bamfile,
-#    CramIndex=subset_cram.bamindex,
-#    Name=Name,
-#    Bed=CoverageBed,
-#    refFasta=Reference,
-#    jobGroup=JobGroup
-#  }
+  call cov_qc as gene_qc {
+    input: Cram=Cram,
+    CramIndex=CramIndex,
+    Name=Name,
+    Bed=CoverageBed,
+    refFasta=Reference,
+    jobGroup=JobGroup
+  }
 
-#  call cov_qc as sv_qc {
-#    input: Cram=subset_cram.bamfile,
-#    CramIndex=subset_cram.bamindex,
-#    Name=Name,
-#    Bed=SVBed,
-#    refFasta=Reference,
-#    jobGroup=JobGroup
-#  }
+  call cov_qc as sv_qc {
+    input: Cram=Cram,
+    CramIndex=CramIndex,
+    Name=Name,
+    Bed=SVBed,
+    refFasta=Reference,
+    jobGroup=JobGroup
+  }
   
   call run_manta {
     input: Bam=Cram,
@@ -163,11 +163,11 @@ workflow ChromoSeq {
     run_ichor.report,run_ichor.rdata,run_ichor.wig,
     run_ichor.cn_bw,run_ichor.l2r_bw,run_ichor.bed,
     run_ichor.correct_pdf,
- #   gene_qc.qc_out,
- #   gene_qc.region_dist,
- #   gene_qc.global_dist,
- #   sv_qc.qc_out,
- #   sv_qc.region_dist,
+    gene_qc.qc_out,
+    gene_qc.region_dist,
+    gene_qc.global_dist,
+    sv_qc.qc_out,
+    sv_qc.region_dist,
     annotate_variants.annotated_filtered_vcf,
     annotate_variants.annotated_filtered_tsv,
     make_report.report,  #make_bw.bigwig_file,
