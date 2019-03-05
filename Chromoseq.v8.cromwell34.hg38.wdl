@@ -159,7 +159,6 @@ workflow ChromoSeq {
     run_ichor.seg,
     run_ichor.genomewide_pdf,
     run_ichor.allgenomewide_pdf,
-    run_ichor.rdata,run_ichor.wig,
     run_ichor.report,run_ichor.rdata,run_ichor.wig,
     run_ichor.cn_bw,run_ichor.l2r_bw,run_ichor.bed,
     run_ichor.correct_pdf,
