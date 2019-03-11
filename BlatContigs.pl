@@ -48,7 +48,7 @@ while(<M>){
 	my %comp = ();
 	map { $comp{$_}++ } split('',$junc);
 
-	next if (length($junc) > $junctionLength && (max(values %comp)/length($junc)) > $junctionComp);
+#	next if (length($junc) > $junctionLength && (max(values %comp)/length($junc)) > $junctionComp);
     }
 
     if ($F[7] =~ /CONTIG=([ACGTNactgn]+)/){
@@ -57,7 +57,7 @@ while(<M>){
 	my %comp = ();
 	map { $comp{$_}++ } split('',$contig);
 
-	next if (max(values %comp)/length($contig)) > $contigComp;
+#	next if (max(values %comp)/length($contig)) > $contigComp;
 	
 	print FA ">$F[2]\n$contig\n";
 	$seqs{$F[2]} = length($contig);
