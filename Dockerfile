@@ -34,7 +34,8 @@ RUN apt-get update && \
 		       libreadline-dev \
 		       python-dev \
 		       libpcre3 \
-		       libpcre3-dev
+		       libpcre3-dev \
+                       default-jdk
 		       
 RUN cd /opt/ && \
     git config --global http.sslVerify false && \
@@ -162,6 +163,28 @@ RUN mkdir -p /opt/lib/perl/VEP/Plugins && chmod a+wrx /opt/lib/perl/VEP/Plugins
 COPY Downstream.pm /opt/lib/perl/VEP/Plugins/Downstream.pm
 COPY Wildtype.pm /opt/lib/perl/VEP/Plugins/Wildtype.pm
 
+#install docker, instructions from https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg-agent \
+    software-properties-common
+
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+
+RUN add-apt-repository \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+
+RUN apt-get update
+
+RUN apt-get install -y docker-ce
+
+WORKDIR /opt/
+RUN wget https://github.com/broadinstitute/cromwell/releases/download/36/cromwell-36.jar
+
 RUN mkdir /opt/files/
 
 COPY add_annotations_to_table_helper.py /usr/local/bin/add_annotations_to_table_helper.py
@@ -180,6 +203,8 @@ COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz
 COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
 COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
+COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
+COPY Chromoseq.v8.cromwell34.hg38.wdl /opt/files/Chromoseq.v8.cromwell34.hg38.wdl
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
@@ -192,3 +217,4 @@ RUN chmod a+wrx /usr/local/bin/*
 #RUN git clone -b master https://github.com/luntergroup/octopus.git && \
 #    cd octopus && \
 #    /opt/conda/bin/python ./scripts/install.py 
+
