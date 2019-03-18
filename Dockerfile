@@ -205,6 +205,10 @@ COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
 COPY Chromoseq.v8.cromwell34.hg38.wdl /opt/files/Chromoseq.v8.cromwell34.hg38.wdl
+COPY all_sequences.dict /opt/files/all_sequences.dict
+COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
+COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
+COPY all_sequences.fa.gz /opt/files/all_sequences.fa.gz
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*

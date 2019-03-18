@@ -14,10 +14,10 @@ workflow ChromoSeq {
 
   String Blacklist = "/opt/files/hg38.blacklist.merged.bed"
     
-  String Reference = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa"
-  String ReferenceIndex = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.fai"
-  String ReferenceBED = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.bed.gz"
-  String Dictionary = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.dict"
+  String Reference = "/opt/files/all_sequences.fa"
+  String ReferenceIndex = "/opt/files/all_sequences.fa.fai"
+  String ReferenceBED = "/opt/files/all_sequences.fa.bed.gz"
+  String Dictionary = "/opt/files/all_sequences.dict"
   String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache/"
 
   Float minVarFreq=0.05
