@@ -1,6 +1,24 @@
 #https://developer.basespace.illumina.com/docs/content/documentation/native-apps/spacedock-conventions#UploadResultstoBaseSpacewithProperties
 
-import glob, json, os
+import glob, json, os, subprocess
+
+#most files are in /opt/files, so switch to it and use as a working directory
+os.chdir('/opt/files')
+
+#decompress reference fasta file
+print('Decompressing reference fasta...')
+subprocess.check_call(['gunzip', 'all_sequences.fa.gz'])
+print('Done decompressing')
+
+#download and setup VEP cache
+print('Downloading VEP cache, this may take a while...')
+subprocess.check_call(['curl', '-OsS', 'ftp://ftp.ensembl.org/pub/release-90/variation/VEP/homo_sapiens_vep_90_GRCh38.tar.gz'])
+print('Download complete. Unpacking...')
+subprocess.check_call(['tar', 'xzf', 'homo_sapiens_vep_90_GRCh38.tar.gz'])
+print('Unpacking complete')
+
+
+
 
 #get basespace related properties
 with open("/data/input/AppSession.json") as a_s_j:

@@ -18,7 +18,7 @@ workflow ChromoSeq {
   String ReferenceIndex = "/opt/files/all_sequences.fa.fai"
   String ReferenceBED = "/opt/files/all_sequences.fa.bed.gz"
   String Dictionary = "/opt/files/all_sequences.dict"
-  String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache/"
+  String VEP = "/opt/files"
 
   Float minVarFreq=0.05
   
