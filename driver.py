@@ -45,32 +45,34 @@ crai_file = crai_search[0]
 name = cram_file.split("/")[-1].split(".")[0]
 
 #basespace-specified directory structure: /data/output/appresults/<project-id>/[directory_with_appresult_name]/[your_files]
-output_base = "/data/output/appresults/" + project_id + "/{0}" 
+output_dir = "/data/output/appresults/{0}/{1}".format(project_id, name) 
+os.makedirs(output_dir) #recursively create the output directory
 
-json_dict = {}
-json_dict["Cram"] = cram_file
-json_dict["CramIndex"] = crai_file
-json_dict["Name"] = name
-json_dict["OutputDir"] = "/data/output/appresults/{0}".format(project_id)
+#create inputs.json file
+wf_inputs_dict = \
+{
+    "ChromoSeq.Cram": cram_file,
+    "ChromoSeq.CramIndex": crai_file,
+    "ChromoSeq.Name": name,
+    "Chromoseq.OutputDir": output_dir
+}
 
-#with open("/opt/files/inputs.json") as f:
+with open("/opt/files/inputs.json", "w+") as f:
+    json.dump(wf_inputs_dict, f)
 
 
-curr_output_dir = output_base.format("example_output")
-os.makedirs(curr_output_dir)
-curr_outfile = curr_output_dir + "/inputs.json"
 
-with open(curr_outfile, "w+") as f:
-    json.dump(json_dict, f)
+#create metadata file required by basespace for upload; each workflow generated ouput file is tagged
+#with the downloaded basespace file(s) used to generate it
 
-metadata_outfile = curr_output_dir + "/_metadata.json"
+metadata_outfile = output_dir + "/_metadata.json"
 
-#TODO the properties list may need to be dynamically generated from fields in AppSession.json
+#note that the value of key "Name" must match the dirname at the trailing end of $output_dir
 metadata_json_template = \
 {
-    "Name": "",
-    "Description": "",
-    "HrefAppSession": "",
+    "Name": name,
+    "Description": "Outputs from Chromoseq workflow run on {}".format(cram_file),
+    "HrefAppSession": appsession_href,
     "Properties": [
         {
             "Type": "file[]",
@@ -81,16 +83,9 @@ metadata_json_template = \
         }
     ]
 }
-
-#these are specific to the test case and are being hardcoded; should be dynamically generated in production
-metadata_json_template["Name"] = "example_output" #must match dirname at the trailing end of $curr_output_dir
-metadata_json_template["Description"] = "test inputs file as output"
-metadata_json_template["HrefAppSession"] =  appsession_href
-metadata_json_template['Properties'][0]['Items'].append(file_href)
+metadata_json_template['Properties'][0]['Items'].append(file_href) #TODO should all files be included here? if not this line can be deleted and assignment placed inline
 
 with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
-second_tester = curr_output_dir + "/another_file.json"
-with open(second_tester, "w+") as f:
-    json.dump(metadata_json_template, f)
+#TODO launch cromwell
