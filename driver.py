@@ -1,6 +1,6 @@
 #https://developer.basespace.illumina.com/docs/content/documentation/native-apps/spacedock-conventions#UploadResultstoBaseSpacewithProperties
 
-import glob, json, os, subprocess
+import glob, json, os, subprocess, sys
 
 #most files are in /opt/files, so switch to it and use as a working directory
 os.chdir('/opt/files')
@@ -18,9 +18,7 @@ subprocess.check_call(['tar', 'xzf', 'homo_sapiens_vep_90_GRCh38.tar.gz'])
 print('Unpacking complete')
 
 
-
-
-#get basespace related properties
+#get basespace related properties/metadata
 with open("/data/input/AppSession.json") as a_s_j:
     appsession = json.load(a_s_j)
 
@@ -34,9 +32,13 @@ for e in appsession['Properties']['Items']:
 appsession_href = appsession['Href'] #basespace internal reference to the current appsession
 
 cram_search = glob.glob('/data/input/appresults/*/*.cram')
-assert len(cram_search) == 1
+if len(cram_search) != 1:
+    print('Error- expected 1 cram file but found {0}'.format(len(cram_search)))
+    sys.exit(1)
 crai_search = glob.glob('/data/input/appresults/*/*.crai')
-assert len(crai_search) == 1
+if len(crai_search) != 1:
+    print('Error- expected 1 crai file but found {0}'.format(len(cram_search)))
+    sys.exit(1)
 
 cram_file = cram_search[0]
 crai_file = crai_search[0]
@@ -49,7 +51,7 @@ json_dict = {}
 json_dict["Cram"] = cram_file
 json_dict["CramIndex"] = crai_file
 json_dict["Name"] = name
-json_dict["OutputDir"] = "/data/output/appresults/{0}".format(project_id) #TODO this will have to be changed- not as simple as dumping the results into this folder
+json_dict["OutputDir"] = "/data/output/appresults/{0}".format(project_id)
 
 #with open("/opt/files/inputs.json") as f:
 
