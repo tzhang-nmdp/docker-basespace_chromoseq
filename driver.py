@@ -54,7 +54,7 @@ wf_inputs_dict = \
     "ChromoSeq.Cram": cram_file,
     "ChromoSeq.CramIndex": crai_file,
     "ChromoSeq.Name": name,
-    "Chromoseq.OutputDir": output_dir
+    "ChromoSeq.OutputDir": output_dir
 }
 
 with open("/opt/files/inputs.json", "w+") as f:
