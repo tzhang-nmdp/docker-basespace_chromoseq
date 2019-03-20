@@ -181,7 +181,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "4"
     memory: "32 G"
   }
@@ -215,7 +215,7 @@ task run_manta {
     bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "4"
     memory: "32 G"
   }
@@ -262,7 +262,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "16 G"
   }
@@ -301,7 +301,7 @@ task run_varscan {
   >>>
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "2"
     memory: "16 G"
   }
@@ -328,7 +328,7 @@ task run_pindel_region {
   >>>
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "16 G"
   }
@@ -353,7 +353,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "32 G"
   }
@@ -375,7 +375,7 @@ task subset_cram {
   }
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "16 G"
   }
@@ -401,7 +401,7 @@ task make_bw {
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "4"
     memory: "32 G"
   }
@@ -428,7 +428,7 @@ task combine_variants {
     /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
   }
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "10 G"
   }
@@ -464,7 +464,7 @@ task annotate_variants {
     
   }
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "32 G"
   }
@@ -490,7 +490,7 @@ task annotate_svs {
   }
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
     cpu: "1"
     memory: "10 G"
   }
@@ -515,7 +515,7 @@ task make_report {
   }
   
   runtime {
-    docker_image: "dhspence/docker-chromoseq"
+    docker: "johnegarza/chromoseq"
   }
   
   output {
@@ -544,7 +544,7 @@ task make_igv {
   }
   
   runtime {
-    docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
+    docker: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
   }
   
   output {
@@ -560,7 +560,7 @@ task remove_files {
     /bin/rm ${sep=" " files}
   }
   runtime {
-    docker_image: "ubuntu:xenial"
+    docker: "ubuntu:xenial"
   }
   output {
     String done = stdout()
@@ -575,7 +575,7 @@ task gather_files {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
   }
   runtime {
-    docker_image: "ubuntu:xenial"
+    docker: "ubuntu:xenial"
   }
   output {
     String done = stdout()
