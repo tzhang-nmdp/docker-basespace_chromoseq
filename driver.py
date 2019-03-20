@@ -88,4 +88,7 @@ metadata_json_template['Properties'][0]['Items'].append(file_href) #TODO should 
 with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
-#TODO launch cromwell
+print('\nLaunching cromwell')
+cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v8.cromwell34.hg38.wdl"]
+subprocess.check_call(cromwell_cmd)
+print('\nCromwell complete')

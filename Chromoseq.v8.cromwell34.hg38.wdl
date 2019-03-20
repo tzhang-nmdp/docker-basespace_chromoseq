@@ -22,15 +22,12 @@ workflow ChromoSeq {
 
   Float minVarFreq=0.05
   
-  String JobGroup = "/dspencer/chromoseq"
-
   call subset_cram {
     input: Cram=Cram,
     CramIndex=CramIndex,
     Bed=ReferenceBED,
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call cov_qc as gene_qc {
@@ -39,7 +36,6 @@ workflow ChromoSeq {
     Name=Name,
     Bed=CoverageBed,
     refFasta=Reference,
-    jobGroup=JobGroup
   }
 
   call cov_qc as sv_qc {
@@ -48,7 +44,6 @@ workflow ChromoSeq {
     Name=Name,
     Bed=SVBed,
     refFasta=Reference,
-    jobGroup=JobGroup
   }
   
   call run_manta {
@@ -59,7 +54,6 @@ workflow ChromoSeq {
     ReferenceBED=ReferenceBED,
     SVAnnot=SVDB,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call run_ichor {
@@ -70,7 +64,6 @@ workflow ChromoSeq {
     ReferenceBED=ReferenceBED,
     Bed=Cytobands,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call run_varscan {
@@ -80,7 +73,6 @@ workflow ChromoSeq {
     MinFreq=minVarFreq,
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup
   }
   
 #  call run_platypus {
@@ -90,7 +82,6 @@ workflow ChromoSeq {
 #    MinFreq=minVarFreq,
 #    Name=Name,
 #    refFasta=Reference,
-#    jobGroup=JobGroup
 #  }
   
   call run_pindel_region as run_pindel_flt3itd {
@@ -99,7 +90,6 @@ workflow ChromoSeq {
     Reg='chr13:28033987-28034316',
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup
   }
   
 #  call make_bw {
@@ -107,7 +97,6 @@ workflow ChromoSeq {
 #    index=subset_cram.bamindex,
 #    label=Name,
 #    Blacklist=Blacklist,
-#    jobGroup=JobGroup
 #  }
   
   call combine_variants {
@@ -119,7 +108,6 @@ workflow ChromoSeq {
     BamIndex=subset_cram.bamindex,
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call annotate_variants {
@@ -127,7 +115,6 @@ workflow ChromoSeq {
     refFasta=Reference,
     Vepcache=VEP,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call annotate_svs {
@@ -135,7 +122,6 @@ workflow ChromoSeq {
     refFasta=Reference,
     Vepcache=VEP,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call make_report {
@@ -145,7 +131,6 @@ workflow ChromoSeq {
     TranslocationsBED=Translocations,
     CytobandsBED=Cytobands,
     Name=Name,
-    jobGroup=JobGroup
   }
   
   call make_igv {
@@ -172,13 +157,11 @@ workflow ChromoSeq {
     make_report.report,  #make_bw.bigwig_file,
     make_igv.igv_xml],
     OutputDir=OutputDir,
-    jobGroup=JobGroup
   }
   
   call remove_files as cleanup {
     input: files=[subset_cram.bamfile,subset_cram.bamindex],
     order_by=gather_files.done,
-    jobGroup=JobGroup    
   }
   
 }
@@ -189,7 +172,6 @@ task cov_qc {
   String Bed
   String Name
   String refFasta
-  String jobGroup
   
   command <<<
     /opt/conda/bin/mosdepth -n -f ${refFasta} -t 4 -i 2 -Q 20 -b ${Bed} --thresholds 10,20,30,40 "${Name}" ${Cram} && \
@@ -202,7 +184,6 @@ task cov_qc {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "4"
     memory: "32 G"
-    job_group: jobGroup
   }
   
   output {
@@ -221,7 +202,6 @@ task run_manta {
   String Reference
   String ReferenceBED
   String SVAnnot
-  String jobGroup
   
   command <<<
     /usr/local/src/manta/bin/configManta.py --config=/opt/files/configManta.hg38.py.ini --tumorBam=${Bam} --referenceFasta=${Reference} \
@@ -238,7 +218,6 @@ task run_manta {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "4"
     memory: "32 G"
-    job_group: jobGroup
   }
   output {
     File filtered_vcf = "${Name}.tumorSV.filtered.vcf.gz"
@@ -255,7 +234,6 @@ task run_ichor {
   String refFasta
   String refIndex
   String Name
-  String jobGroup
 
   command <<<
     /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 > /tmp/windows.bed && \
@@ -287,7 +265,6 @@ task run_ichor {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "16 G"
-    job_group: jobGroup
   }
   
   output {
@@ -314,7 +291,6 @@ task run_varscan {
   String CoverageBed
   String refFasta
   String Name
-  String jobGroup
     
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta}".gz" -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
@@ -328,7 +304,6 @@ task run_varscan {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "2"
     memory: "16 G"
-    job_group: jobGroup
   }
   output {
     File varscan_snv_file = "${Name}.snv.vcf"
@@ -344,7 +319,6 @@ task run_pindel_region {
   Int? MinReads
   String refFasta
   String Name
-  String jobGroup
   
   command <<<
     (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
@@ -357,7 +331,6 @@ task run_pindel_region {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "16 G"
-    job_group: jobGroup
   }
   output {
     File pindel_vcf_file = "${Name}.pindel.vcf"
@@ -372,7 +345,6 @@ task run_platypus {
   Float? MinFreq
   String Name
   String refFasta
-  String jobGroup
   
   command <<<
     /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
@@ -384,7 +356,6 @@ task run_platypus {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "32 G"
-    job_group: jobGroup
   }
   output {
     File platypus_vcf_file = "${Name}.platypus.vcf"
@@ -397,7 +368,6 @@ task subset_cram {
   String refFasta
   String Bed
   String Name
-  String jobGroup
   
   command {
     /usr/local/bin/samtools view -T ${refFasta} -L ${Bed} -b -o "${Name}.subset.bam" ${Cram} && \
@@ -408,7 +378,6 @@ task subset_cram {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "16 G"
-    job_group: jobGroup
   }
   
   output {
@@ -423,7 +392,6 @@ task make_bw {
   String index
   String label
   String Blacklist
-  String jobGroup
   
   Int? genome_size
   
@@ -436,7 +404,6 @@ task make_bw {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "4"
     memory: "32 G"
-    job_group: jobGroup
   }
   output {
     File bigwig_file = "${label}.bw"
@@ -453,7 +420,6 @@ task combine_variants {
   String BamIndex
   String refFasta
   String Name
-  String jobGroup
   
   command {
     /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
@@ -465,7 +431,6 @@ task combine_variants {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "10 G"
-    job_group: jobGroup
   }
   output {
     File combined_vcf_file = "${Name}.combined_tagged.vcf"
@@ -479,7 +444,6 @@ task annotate_variants {
   String Vepcache
   Float? maxAF
   String Name
-  String jobGroup
   
   command {
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
@@ -503,7 +467,6 @@ task annotate_variants {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "32 G"
-    job_group: jobGroup
   }
   output {
     File annotated_vcf = "${Name}.annotated.vcf.gz"
@@ -517,7 +480,6 @@ task annotate_svs {
   String refFasta
   String Vepcache
   String Name
-  String jobGroup
   
   command {
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
@@ -531,7 +493,6 @@ task annotate_svs {
     docker_image: "dhspence/docker-chromoseq"
     cpu: "1"
     memory: "10 G"
-    job_group: jobGroup
   }
   
   output {
@@ -548,7 +509,6 @@ task make_report {
   String TranslocationsBED
   String CytobandsBED
   String Name
-  String jobGroup
   
   command {
     perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
@@ -556,7 +516,6 @@ task make_report {
   
   runtime {
     docker_image: "dhspence/docker-chromoseq"
-    job_group: jobGroup
   }
   
   output {
@@ -596,14 +555,12 @@ task make_igv {
 task remove_files {
   Array[String] files
   String order_by
-  String jobGroup
   
   command {
     /bin/rm ${sep=" " files}
   }
   runtime {
     docker_image: "ubuntu:xenial"
-    job_group: jobGroup
   }
   output {
     String done = stdout()
@@ -613,7 +570,6 @@ task remove_files {
 task gather_files {
   Array[String] OutputFiles
   String OutputDir
-  String jobGroup
   
   command {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
