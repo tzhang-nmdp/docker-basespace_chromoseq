@@ -180,12 +180,6 @@ task cov_qc {
     mv "${Name}.mosdepth.region.dist.txt" "${Name}.mosdepth."$(basename ${Bed} .bed)".region.dist.txt"
   >>>
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "4"
-    memory: "32 G"
-  }
-  
   output {
     File qc_out = glob("*.covqc.txt")[0]
     File global_dist = "${Name}.mosdepth.global.dist.txt"
@@ -214,11 +208,6 @@ task run_manta {
     perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
     bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "4"
-    memory: "32 G"
-  }
   output {
     File filtered_vcf = "${Name}.tumorSV.filtered.vcf.gz"
     File filtered_index = "${Name}.tumorSV.filtered.vcf.gz.tbi"
@@ -261,12 +250,6 @@ task run_ichor {
     mv ${Name}/*.pdf .
   >>>
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "16 G"
-  }
-  
   output {
     File params = "${Name}.params.txt"
     File seg = "${Name}.seg.txt"
@@ -300,11 +283,6 @@ task run_varscan {
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.indel.vcf
   >>>
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "2"
-    memory: "16 G"
-  }
   output {
     File varscan_snv_file = "${Name}.snv.vcf"
     File varscan_indel_file = "${Name}.indel.vcf"
@@ -327,11 +305,6 @@ task run_pindel_region {
     /bin/sed 's/END=[0-9]*\;//' pindel.vcf > ${Name}.pindel.vcf
   >>>
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "16 G"
-  }
   output {
     File pindel_vcf_file = "${Name}.pindel.vcf"
   }
@@ -352,11 +325,6 @@ task run_platypus {
     /bin/sed 's/VCFv4.3/VCFv4.1/' "${Name}.vcf" > "${Name}.platypus.vcf"     
   >>>
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "32 G"
-  }
   output {
     File platypus_vcf_file = "${Name}.platypus.vcf"
   }
@@ -372,12 +340,6 @@ task subset_cram {
   command {
     /usr/local/bin/samtools view -T ${refFasta} -L ${Bed} -b -o "${Name}.subset.bam" ${Cram} && \
     /usr/local/bin/samtools index "${Name}.subset.bam"
-  }
-  
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "16 G"
   }
   
   output {
@@ -400,11 +362,6 @@ task make_bw {
     /opt/conda/bin/bamCoverage --bam ${in} -o "${label}.bw" --effectiveGenomeSize ${default=2451960000 genome_size} --normalizeUsing RPGC \
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "4"
-    memory: "32 G"
-  }
   output {
     File bigwig_file = "${label}.bw"
   }
@@ -426,11 +383,6 @@ task combine_variants {
     --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
     /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o /tmp/combined.vcf && \
     /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
-  }
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "10 G"
   }
   output {
     File combined_vcf_file = "${Name}.combined_tagged.vcf"
@@ -463,11 +415,6 @@ task annotate_variants {
     mv variants.annotated.tsv ${Name}.variants_annotated.tsv
     
   }
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "32 G"
-  }
   output {
     File annotated_vcf = "${Name}.annotated.vcf.gz"
     File annotated_filtered_vcf = "${Name}.annotated_filtered.vcf.gz"
@@ -489,11 +436,6 @@ task annotate_svs {
     /usr/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz
   }
   
-  runtime {
-    docker: "johnegarza/chromoseq"
-    cpu: "1"
-    memory: "10 G"
-  }
   
   output {
     File vcf = "${Name}.svs_annotated.vcf.gz"
@@ -512,10 +454,6 @@ task make_report {
   
   command {
     perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
-  }
-  
-  runtime {
-    docker: "johnegarza/chromoseq"
   }
   
   output {
@@ -543,10 +481,6 @@ task make_igv {
     EOF    
   }
   
-  runtime {
-    docker: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
-  }
-  
   output {
     File igv_xml = "${Name}.igv.xml"
   }  
@@ -559,9 +493,6 @@ task remove_files {
   command {
     /bin/rm ${sep=" " files}
   }
-  runtime {
-    docker: "ubuntu:xenial"
-  }
   output {
     String done = stdout()
   }
@@ -573,9 +504,6 @@ task gather_files {
   
   command {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
-  }
-  runtime {
-    docker: "ubuntu:xenial"
   }
   output {
     String done = stdout()
