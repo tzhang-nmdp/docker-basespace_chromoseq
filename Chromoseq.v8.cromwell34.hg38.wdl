@@ -276,7 +276,7 @@ task run_varscan {
   String Name
     
   command <<<
-    /usr/local/bin/samtools mpileup -f ${refFasta}".gz" -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
+    /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.snv.vcf && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
