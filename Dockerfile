@@ -207,6 +207,7 @@ COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
 COPY Chromoseq.v8.cromwell34.hg38.wdl /opt/files/Chromoseq.v8.cromwell34.hg38.wdl
 COPY all_sequences.dict /opt/files/all_sequences.dict
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
+COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 COPY all_sequences.fa.gz /opt/files/all_sequences.fa.gz
 COPY driver.py /opt/files/driver.py
