@@ -201,14 +201,18 @@ while(<T>){
     my $paired_fraction = 0.0;    
     my $split_support = 0;
     my $split_fraction = 0.0;
+
     
     if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
       $paired_support = "$2/" . ($1+$2);
       $paired_fraction = $2/($2+$1);    
       $split_support = "$3/" . ($3+$4);
       $split_fraction = $3/($3+$4);
+    } elsif ($l[9] =~ /(\d+),(\d+)$/){
+      $paired_support = "$2/" . ($1+$2);
+      $paired_fraction = $2/($2+$1);
     }
-
+    
     $l[7] =~ /POPFREQ_AF=(\S+?);/;
     my $popfreq = $1 * 100 . "%";
 	  
@@ -231,7 +235,7 @@ while(<T>){
 		 "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
 		 "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
 		 "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","population frequency: " . $popfreq),"\n";
+		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","Flags: " . $l[6],"population frequency: " . $popfreq),"\n";
       $isknown{$id} = 1;
     }
     $anytrans++;
