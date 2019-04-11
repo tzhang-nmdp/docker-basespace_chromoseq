@@ -11,12 +11,18 @@ my $CHROMOSEQAPP = 6984978;
 
 my $RefId = 14321367413;
 
-my $debug = "TESTING11-";
+my $debug = "";
 
-my $ProjectName = "TestProject";
+my $ProjectName = shift @ARGV;
 #my $ProjectId = 126915789; # a dummy project
 
+my $outdir = shift @ARGV;
+
+mkdir $outdir if !-e $outdir;
+
 my @dirs = @ARGV;
+
+map { die "$_ doesnt exist" if ! -e $_ } @dirs;
 
 # go through datasets and make sure they're all from the same library
 my %datasets = ();
@@ -56,6 +62,8 @@ if (!defined($biosamples{$biosamplename})){
     
 }
 
+sleep 10;
+
 my $biosample_json = from_json(`$BS biosample get -n $biosamplename -f json`);
 
 # get project id
@@ -68,38 +76,42 @@ my $label = "Upload $biosamplename " . localtime();
 print STDERR "Uploading $biosamplename...\n";
 my $upload_json = `$BS upload dataset -p $ProjectId --recursive --biosample-name=$biosamplename --library-name=$manifest{library_summary}{full_name} -l \"$label\" $dirs`;
 
+sleep 30;
+
 $label = "Dragen $biosamplename " . localtime();
 my $align_json = from_json(`$BS launch application -i $DRAGENAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ht-ref:custom.v7 -o ht-id:$RefId -o input_list.tumor-sample:$biosample_json->{Id} -o dupmark_checkbox:1 -o bai_checkbox:1 -o output_format:CRAM -f json | tee $biosamplename.$manifest{index_illumina}{analysis_id}.dragen.json`);
 
 print STDERR "Launched Dragen: $label. Waiting...\n";
 
 # now wait
-my $align_result = from_json(`$BS await appsession $align_json->{Id} -f json`);
+#my $align_result = from_json(`$BS await appsession $align_json->{Id} -f json`);
 
-die "Dragen failed! Check logs for AppSession: $align_result->{AppSession}{Name}" if ($align_result->{AppSession}{ExecutionStatus} !~ /Complete/);
+#die "Dragen failed! Check logs for AppSession: $align_result->{AppSession}{Name}" if ($align_result->{AppSession}{ExecutionStatus} !~ /Complete/);
 
-print STDERR "Dragen finished.\n";
+#print STDERR "Dragen finished.\n";
 
 # get cram files
-my @cram = `$BS contents dataset -i $align_result->{Id} -f csv | grep cram | cut -d ',' -f 1`;
-chomp @cram;
-my $files = join(",",@cram);
+#my @cram = `$BS contents dataset -i $align_result->{Id} -f csv | grep cram | cut -d ',' -f 1`;
+#chomp @cram;
+#my $files = join(",",@cram);
 
 # launch chromoseq
-$label = "Chromoseq $biosamplename " . localtime();
-my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o file-id:$files -f json`);
+#$label = "Chromoseq $biosamplename " . localtime();
+#my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o file-id:$files -f json`);
 
-$chromoseq_result = from_json(`$BS await appsession $chromoseq_session->{Id} -f json`);
+#$chromoseq_result = from_json(`$BS await appsession $chromoseq_session->{Id} -f json`);
 
-print STDERR "Launched Chromoseq: $label. Waiting...\n";
+#print STDERR "Launched Chromoseq: $label. Waiting...\n";
 
-die "Chromoseq failed! Check logs for AppSession: $chromoseq_result->{AppSession}{Name}" if ($chromoseq_result->{AppSession}{ExecutionStatus} !~ /Complete/);
+#die "Chromoseq failed! Check logs for AppSession: $chromoseq_result->{AppSession}{Name}" if ($chromoseq_result->{AppSession}{ExecutionStatus} !~ /Complete/);
 
-print STDERR "Chromoseq finished.\nDownloading files to $outdir.\n";
+#print STDERR "Chromoseq finished.\nDownloading files to $outdir.\n";
 
 # download files
 
-`$BS download dataset -i $chromoseq_result->{Id} -o $outdir`;
+#`$BS download dataset -i $align_json->{Id} --extension=csv -o \"$ProjectName/$dataset_json->{Name}\"`;
 
-print STDERR "Done.\n";
+#`$BS download dataset -i $chromoseq_result->{Id} -o $outdir`;
+
+#print STDERR "Done.\n";
 

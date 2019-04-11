@@ -171,12 +171,14 @@ COPY addReadCountsToVcfCRAM.py /usr/local/bin/addReadCountsToVcfCRAM.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
 COPY ChromoSeq.hg38.bed /opt/files/ChromoSeq.hg38.bed
 COPY GeneRegions.bed /opt/files/GeneRegions.bed
-COPY ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe /opt/files/ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe
+COPY ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe /opt/files/ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe
 COPY ChromoSeqReporter.hg38.pl /usr/local/bin/ChromoSeqReporter.hg38.pl
 COPY BlatContigs.pl /usr/local/bin/BlatContigs.pl
 COPY pslScore.pl /usr/local/bin/pslScore.pl
 COPY hg38.blacklist.merged.bed /opt/files/hg38.blacklist.merged.bed
 COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz
+COPY all.stranded.filtered.merged.bedpe.gz /opt/files/all.stranded.filtered.merged.bedpe.gz
+COPY all.stranded.filtered.merged.bedpe.gz.tbi /opt/files/all.stranded.filtered.merged.bedpe.gz.tbi
 COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
 COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
