@@ -83,11 +83,11 @@ while(<F>){
 	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
 	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){	    
-	    print "seq[GRCh38] +($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] gain($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	   	    
 	} else {
 	    my @bands = split(",",$bands);
-	    print "seq[GRCh38] +($c)($bands[0]$bands[$#bands])\nchr$c:g." . $start . "_" . $end . "gain\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] gain($c)($bands[0]$bands[$#bands])\nchr$c:g." . $start . "_" . $end . "gain\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	}
     } elsif ($l2r < 0){
@@ -219,20 +219,6 @@ while(<T>){
   if ($l[7] =~ /CONTIG=([ACTGNactgn]+);/){
       $contig = $1;
   }
-  
-  my $ci = '';
-  if ($l[7] =~ /CIPOS=(\S+?);/){
-      $ci = "PRECISION: $1";
-  }
-
-  my $dp1 = 0;
-  if ($l[7] =~ /[^_=]BND_DEPTH=(\d+)/){
-    $dp1 = $1;
-  }
-  my $dp2 = 0;
-  if ($l[7] =~ /MATE_BND_DEPTH=(\d+)/){
-    $dp2 = $1;
-  }  
 
   # get support
   my $paired_support = 0;
@@ -244,7 +230,7 @@ while(<T>){
       $paired_support = "$2/" . ($1+$2);
       $paired_fraction = ($2+$1) > 0 ? $2/($2+$1) : 0.0;
       $split_support = "$3/" . ($3+$4);
-      $split_fraction = ($3+$4) > 0 ? $3/($3+$4) : 0.0;
+      $split_fraction = ($3+$4) > 0 ? $4/($3+$4) : 0.0;
   } elsif ($l[9] =~ /(\d+),(\d+)$/){
       $paired_support = "$2/" . ($1+$2);
       $paired_fraction = ($2+$1) > 0 ? $2/($2+$1) : 0.0;
@@ -266,7 +252,7 @@ while(<T>){
 		   "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
 		   "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
 		   "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-		   "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","Flags: " . $filter,
+		   "Flags: " . $filter,
 		   "Population frequency: " . ($popfreq * 100) . "%",
 		   "ChromoSeq frequency: " . ($csblfreq  * 100) . "%",
 		   "Contig: " . $contig),"\n\n";
@@ -275,11 +261,6 @@ while(<T>){
     }
       $anytrans++;
   }
-  
-#           seq[GRCh38] type(#)(bkptband1bkptband2)                                                                                                                                                                                                                                          
-#            chr#:g.basepairbkpt1_basepairbkpt2type                                                                                                                                                                                                                                          
-# For example:  seq[GRCh38] del(X)(q21.31q22.1)                                                                                                                                                                                                                                              
-#          chrX:g.89555676_100352080del  
 
 
   if ($filter eq 'PASS' && $popfreq == 0 && $csblfreq < $maxBlacklistfreq && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > $minSVlen))){   
@@ -451,12 +432,11 @@ foreach my $v (@list){
   if (($x[0]=~/chr(\S+)/)[0] > ($y[0]=~/chr(\S+)/)[0]){
     my @tmp = @y;
     @y = @x;
-    @x = @y;
+    @x = @tmp;
   }
   my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1,$id11,$id12,$id13,$contig1,$freq1) = @x; #@{$t2{$v}};
   my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2,$id21,$id22,$id23,$contig2,$freq2) = @y; #@{$t2{$t2{$v}[13]}};
 
-  
   if ($type1 eq 'BND'){
     $pref1 = $pref1 + $pref2;
     $palt1 = $palt1 + $palt2;
