@@ -411,7 +411,7 @@ task annotate_variants {
     -R ${refFasta} --variant ${Name}.annotated_filtered.vcf.gz -o ${Name}.variants.tsv \
     -F CHROM -F POS -F ID -F REF -F ALT -F set \
     -GF GT -GF NR -GF NV -GF VAF && \
-    /opt/conda/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
+    /opt/conda/envs/python2/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
     mv variants.annotated.tsv ${Name}.variants_annotated.tsv
     
   }
