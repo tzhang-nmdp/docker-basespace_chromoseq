@@ -83,11 +83,11 @@ while(<F>){
 	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
 	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){	    
-	    print "seq[GRCh38] gain($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] +($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	   	    
 	} else {
 	    my @bands = split(",",$bands);
-	    print "seq[GRCh38] gain($c)($bands[0]$bands[$#bands])\nchr$c:g." . $start . "_" . $end . "gain\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] +($c)($bands[0]$bands[$#bands])\nchr$c:g." . $start . "_" . $end . "gain\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	}
     } elsif ($l2r < 0){
