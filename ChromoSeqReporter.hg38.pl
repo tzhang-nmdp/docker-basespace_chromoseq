@@ -3,6 +3,8 @@
 use strict;
 use JSON;
 
+my %aa3to1 = qw(Ala A Arg R Asn N Asp D Asx B Cys C Glu E Gln Q Glx Z Gly G His H Ile I Leu L Lys K Met M Phe F Pro P Ser S Thr T Trp W Tyr Y Val V Xxx X Ter *);
+
 sub lookup_bed {
     my ($c,$p,$h) = @_;
     my @ret = ();
@@ -32,13 +34,14 @@ sub lookup_translocation {
 }
     
 my $CNVBED = "/opt/files/ChromoSeq.hg38.bed";
-my $TRANSBED = "/opt/files/ChromoSeq.translocations.fixed.v2.sorted.hg38.bedpe";
+my $TRANSBED = "/opt/files/ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe";
 
 my $slop = 0;
 my $frac_for_whole_del = 0.75;
 my $lowabundance = 10;
-my $minSVlen = 1000000;
+my $minSVlen = 100000;
 my $maxSVlen = 5000000;
+my $maxBlacklistfreq = 0.02;
 
 my %genelist = ();
 
@@ -79,12 +82,12 @@ while(<F>){
     if ($l2r > 0){
 	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
-	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){
-	    print "+" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){	    
+	    print "seq[GRCh38] gain($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	   	    
 	} else {
 	    my @bands = split(",",$bands);
-	    print "+" . $c . $bands[0] . '-' . $bands[$#bands] . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] gain($c)($bands[0]$bands[$#bands])\nchr$c:g." . $start . "_" . $end . "gain\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	}
     } elsif ($l2r < 0){
@@ -92,11 +95,17 @@ while(<F>){
 	$abund = ((2**$l2r - 1) / (($cn/2 - 1)))*100;
 	# whole chromosome
 	if ($band_count > (scalar(keys %{$chroms{$chr}}) * $frac_for_whole_del)){
-	    print "-" . $c . "\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+
+#	    seq[GRCh38] type(#)(bkptband1bkptband2)
+#            chr#:g.basepairbkpt1_basepairbkpt2type
+# For example:  seq[GRCh38] del(X)(q21.31q22.1)
+#	   chrX:g.89555676_100352080del
+	    
+	    print "seq[GRCh38] del($c)\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 
 	} else {
 	    my @bands = split(",",$bands);
-	    print "del(" . $c . $bands[0] . '-' . $bands[$#bands] . ")\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
+	    print "seq[GRCh38] del($c)($bands[0]$bands[$#bands])\n" . "chr$c:g." . $start . "_" . $end . "del\n\t[ " . "ploidy: $cn, " . "est. abundance: " . sprintf("%.1f\%",((2**$l2r - 1) / (($cn/2 - 1)))*100) . ", Genes affected: " . $genes . " ]";
 	    
 	}
     }
@@ -156,10 +165,10 @@ my $anytrans = 0;
 
 my %t2 = ();
 
-my %types = ("translocation" => "t",
-	     "inv" => "inv",
-	     "del"=> "del",
-	     "dup" => "dup");
+my %types = ("BND" => "t",
+	     "INV" => "inv",
+	     "DEL"=> "del",
+	     "DUP" => "dup");
 
 my %isknown = ();
     
@@ -173,78 +182,88 @@ while(<T>){
   
   my $foundtrans = 0;
   
-  my ($chr1,$pos1,$chr2,$pos2,$type);
+  my ($chr1,$pos1,$chr2,$pos2,$svtype);
   
   if (/SVTYPE=BND/){
-    $type = "translocation";
-    ($chr1,$pos1) = @l[0..1];
-    $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
-    $chr2 = $1;
-    $pos2 = $2;
+      $svtype = "BND";
+      ($chr1,$pos1) = @l[0..1];
+      $l[4] =~ /[\[\]](\S+):(\d+)[\[\]]/;
+      $chr2 = $1;
+      $pos2 = $2;
   } elsif (/SVTYPE=(INV|DEL|DUP|INS)/){
-    $type = lc($1);
-    ($chr1,$pos1) = @l[0..1];
-    $chr2 = $chr1;
-    $l[7] =~ /END=(\d+)/;
-    $pos2 = $1;
+      $svtype = $1;
+      ($chr1,$pos1) = @l[0..1];
+      $chr2 = $chr1;
+      $l[7] =~ /END=(\d+)/;
+      $pos2 = $1;
   }
+
+  my $filter = $l[6];
+
+  my $len = 0;
+  my $popfreq = 0.0;
+  my $csblfreq = 0.0;
+  
+  if ($l[7] =~ /SVLEN=(\d+);/){
+    $len = $1;
+  }
+  if ($l[7] =~ /POPFREQ_AF=(\S+?);/){
+    $popfreq = $1;
+  }
+  
+  if ($l[7] =~ /BLACKLIST_AF=(\S+?);/){
+    $csblfreq = $1;
+  }
+  
+  my $contig = 'None';
+  if ($l[7] =~ /CONTIG=([ACTGNactgn]+);/){
+      $contig = $1;
+  }
+
+  # get support
+  my $paired_support = 0;
+  my $paired_fraction = 0.0;
+  my $split_support = 0;
+  my $split_fraction = 0.0;  
+  
+  if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
+      $paired_support = "$2/" . ($1+$2);
+      $paired_fraction = ($2+$1) > 0 ? $2/($2+$1) : 0.0;
+      $split_support = "$3/" . ($3+$4);
+      $split_fraction = ($3+$4) > 0 ? $4/($3+$4) : 0.0;
+  } elsif ($l[9] =~ /(\d+),(\d+)$/){
+      $paired_support = "$2/" . ($1+$2);
+      $paired_fraction = ($2+$1) > 0 ? $2/($2+$1) : 0.0;
+  }  
   
   my @t = lookup_translocation($chr1,$pos1,$chr2,$pos2,$slop,\%trans);
   if (scalar @t > 0){
-    
-    my @p1 = lookup_bed($chr1,$pos1,\%bands);
-    my @p2 = lookup_bed($chr2,$pos2,\%bands);
-    
-    # get support
-    
-    my $paired_support = 0;
-    my $paired_fraction = 0.0;    
-    my $split_support = 0;
-    my $split_fraction = 0.0;
-    
-    if ($l[9] =~ /(\d+),(\d+):(\d+),(\d+)$/){
-      $paired_support = "$2/" . ($1+$2);
-      $paired_fraction = $2/($2+$1);    
-      $split_support = "$3/" . ($3+$4);
-      $split_fraction = $3/($3+$4);
-    }
-
-    $l[7] =~ /POPFREQ_AF=(\S+?);/;
-    my $popfreq = $1 * 100 . "%";
-	  
-    my $ci = '';
-    if ($l[7] =~ /CIPOS=(\S+?);/){
-      $ci = "PRECISION: $1";
-    }
-    $l[7] =~ /[^_=]BND_DEPTH=(\d+)/;
-    my $dp1 = $1;
-    $l[7] =~ /MATE_BND_DEPTH=(\d+)/;
-    my $dp2 = $1;	
-    
+      
+      my @p1 = lookup_bed($chr1,$pos1,\%bands);
+      my @p2 = lookup_bed($chr2,$pos2,\%bands);
+      
     foreach my $t (@t){
-      my $c1 = $chr1;
-      $c1 =~ s/chr//;
-      my $c2 = $chr2;
-      $c2 =~ s/chr//;
-      my ($gene1,$gene2) = split("_",$t->{genes});
-      print join("\t",$types{$type} . "(" . $c1 . $p1[0]->{band} . ";" . $c2 . $p2[0]->{band} . ")",
-		 "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
-		 "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-		 "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
-		 "POS1 DEPTH: $dp1","POS2 DEPTH: $dp2","population frequency: " . $popfreq),"\n";
-      $isknown{$id} = 1;
+	my $c1 = $chr1;
+	$c1 =~ s/chr//;
+	my $c2 = $chr2;
+	$c2 =~ s/chr//;
+	my ($gene1,$gene2) = split("_",$t->{genes});
+	print join("\t","seq[GRCh38] $types{$svtype}($c1;$c2)($p1[0]->{band};$p2[0]->{band})\n",
+		   "$gene1--$gene2","$chr1:$pos1;$chr2:$pos2",
+		   "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
+		   "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
+		   "Flags: " . $filter,
+		   "Population frequency: " . ($popfreq * 100) . "%",
+		   "ChromoSeq frequency: " . ($csblfreq  * 100) . "%",
+		   "Contig: " . $contig),"\n\n";
+	
+	$isknown{$id} = 1;
     }
-    $anytrans++;
+      $anytrans++;
   }
-  
-  # if not a recurrent translocation and is not in Hall set, then check quality and report as secondary finding
-  $l[7] =~ /POPFREQ_AF=([0-9.]+)/;
-  my $popfreq = $1;
-  $l[7] =~ /SVLEN=[-]*(\d+)/;
-  my $len = $1;
-  $l[7] =~ /SVTYPE=(BND|DEL|DUP|INV|INS)/;
-  my $svtype = $1; 
-  if ($l[6] eq 'PASS' && $popfreq == 0 && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > $minSVlen))){   
+
+
+  if ($filter eq 'PASS' && $popfreq == 0 && $csblfreq < $maxBlacklistfreq && ($svtype eq 'BND' || ($svtype =~ /DEL|DUP|INS|INV/ && $len > $minSVlen))){   
     
     my $chr1 = $l[0];
     my $pos1 = $l[1];
@@ -288,7 +307,7 @@ while(<T>){
     if ($type eq "BND"){
 	$l[7] =~ /MATEID=([^;]+)/;
 	my $mateid = $1;	
-	$t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt, $id, $mateid, $isknown{$id} ];
+	$t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, $consequence, $exon, $intron, $pref, $palt, $sref, $salt, $id, $mateid, $isknown{$id}, $contig, $csblfreq ];
 	
     } elsif ($type =~ /DEL|DUP|INV|INS/){
 	
@@ -311,8 +330,8 @@ while(<T>){
 	} else {
 	    $g = int(($pos2 - $pos1) / 1000) . " kbp";
 	}
-        $t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id, $id . "-END", $isknown{$id} ];
-	$t2{$id . "-END"} = [ $chr2, $pos2, $p2[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id . "-END", $id, $isknown{$id} ];
+        $t2{$id} = [ $chr1, $pos1, $p1[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id, $id, $isknown{$id}, $contig, $csblfreq ];
+#	$t2{$id . "-END"} = [ $chr2, $pos2, $p2[0]->{band}, $type, $g, '', '', '', $pref, $palt, $sref, $salt, $id . "-END", $id, $isknown{$id}, $contig, $csblfreq ];
     }
     
   }
@@ -333,16 +352,24 @@ while(<F>){
     chomp;
     my @F = split("\t",$_);
 
+    splice(@F,6,4);
+
     next if $F[10]=~/synonymous|UTR|stream/ || $F[5] eq 'FilteredInAll';
+    
     $F[14]=~s/\S+:(c\.\S+?)/\1/g; 
-    $F[15]=~s/\S+:(p\.\S+?)/\1/g; 
+    $F[15]=~s/\S+:(p\.\S+?)/\1/g;
+    my $HGVSpShort = $F[15];
+    while( $HGVSpShort and my ( $find, $replace ) = each %aa3to1 ) {
+        eval "\$HGVSpShort =~ s{$find}{$replace}g";
+    }
+ 
     $F[10]=~/^(\S+?)_/; 
     my $var=uc($1); 
     $var .= " INSERTION" if length($F[4])>length($F[3]); 
     $var .= " DELETION" if length($F[4])<length($F[3]);
     $var .= " SITE VARIANT" if $var =~ /SPLICE/;
     #    $F[15]=~s/\/\d+//g;
-    push @out, join("\t",$F[11],uc($var),$F[15],$F[14],sprintf("%d%",$F[9]*100),$F[0],$F[1],$F[3],$F[4]); 
+    push @out, join("\t",$F[11],uc($var),$HGVSpShort,$F[14],$F[9],$F[0],$F[1],$F[3],$F[4]); 
 }
 close F;
 
@@ -399,11 +426,17 @@ foreach my $v (@list){
   }
 
   $svt = $t2{$v}[3];
-  
-  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1) = @{$t2{$v}};
-  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2) = @{$t2{$t2{$v}[13]}};
 
-  
+  my @x = @{$t2{$v}};
+  my @y = @{$t2{$t2{$v}[13]}};
+  if (($x[0]=~/chr(\S+)/)[0] > ($y[0]=~/chr(\S+)/)[0]){
+    my @tmp = @y;
+    @y = @x;
+    @x = @tmp;
+  }
+  my ($chr1,$pos1,$b1,$type1,$g1,$consequence1,$exon1,$intron1,$pref1,$palt1,$sref1,$salt1,$id11,$id12,$id13,$contig1,$freq1) = @x; #@{$t2{$v}};
+  my ($chr2,$pos2,$b2,$type2,$g2,$consequence2,$exon2,$intron2,$pref2,$palt2,$sref2,$salt2,$id21,$id22,$id23,$contig2,$freq2) = @y; #@{$t2{$t2{$v}[13]}};
+
   if ($type1 eq 'BND'){
     $pref1 = $pref1 + $pref2;
     $palt1 = $palt1 + $palt2;
@@ -411,10 +444,10 @@ foreach my $v (@list){
     $salt1 = $salt1 + $salt2;
   }
   
-  my $paired_support = $palt1 . "/" . ($palt1 + $pref1) ;
-  my $paired_fraction = $palt1 / ($palt1 + $pref1);
+  my $paired_support = $palt1 . "/" . ($palt1 + $pref1);
+  my $paired_fraction = $palt1 + $pref1 > 0 ? $palt1 / ($palt1 + $pref1) : 0.0;
   my $split_support = $salt1 . "/" . ($salt1 + $sref1);
-  my $split_fraction = $salt1 / ($salt1 + $sref1);
+  my $split_fraction = $salt1 + $sref1 > 0 ? $salt1 / ($salt1 + $sref1) :  0.0;
   
   $exon1 = "exon $1" if ($exon1 =~ /(\d+)\/\d+/);
   $exon2 = "exon $1" if ($exon2 =~ /(\d+)\/\d+/);    
@@ -439,16 +472,26 @@ foreach my $v (@list){
     
   if ($type1 eq 'BND'){
 
-    print join("\t","t(" . ($chr1=~/chr(\S+)/)[0] . $b1 . ";" . ($chr2=~/chr(\S+)/)[0] . $b2 . ")",
+    print join("\t","seq[GRCh38] t(" . ($chr1=~/chr(\S+)/)[0] .";" . ($chr2=~/chr(\S+)/)[0] . ")($b1;$b2)\n",
 	       "$consequence1--$consequence2","$chr1:$pos1;$chr2:$pos2",
 	       "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")"),"\n";
+	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
+	       "ChromoSeq frequency: " . ($freq1 * 100) . "%",
+	       "Contig: " . $contig1 . "\n"),"\n";
   } else {
     
-    print join("\t",lc($type1) . "(" . $chr1 . $b1 . "-" . $chr2 . $b2 . ")",
-	       "$g1","$chr1:$pos1-$pos2",
+    print join("\t","seq[GRCh38] " . lc($type1) . "(" . ($chr1=~/chr(\S+)/)[0] . ")" . "(" . $b1 . $b2 . ")\n" .
+	       sprintf("%s:g.%d_%d%s",$chr1,$pos1,$pos2,lc($type1)),"\n",$g1,
 	       "PAIRED_READS: $paired_support (" . sprintf("%.1f\%",$paired_fraction*100) . ")",
-	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")"),"\n";    
+	       "SPLIT_READS: $split_support (" . sprintf("%.1f\%",$split_fraction*100) . ")",
+               "ChromoSeq frequency: " . ($freq1 * 100) . "%",
+               "Contig: " . $contig1 . "\n"),"\n";
   }
 
 }
+
+
+#           seq[GRCh38] type(#)(bkptband1bkptband2)
+#            chr#:g.basepairbkpt1_basepairbkpt2type
+# For example:  seq[GRCh38] del(X)(q21.31q22.1)
+#          chrX:g.89555676_100352080del

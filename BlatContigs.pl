@@ -37,25 +37,25 @@ while(<M>){
     next if /^#/;
     my @F = split("\t",$_);
 
-    # must have minimum PR and SR reads
-    next unless $F[8] =~ /PR/ and $F[8] =~ /SR/;
-    $F[9] =~ /(\d+),(\d+):(\d+),(\d+)$/;
-    next unless $2 > $PR and $4 > $SR;
+#    # must have minimum PR and SR reads
+#    next unless $F[8] =~ /PR/ and $F[8] =~ /SR/;
+#    $F[9] =~ /(\d+),(\d+):(\d+),(\d+)$/;
+#    next unless $2 > $PR and $4 > $SR;
 
     # if junction has low nucleotide complexity
-    if ($F[4] =~ /([ACGT]+)[\[\]]|[\[\]]([ACGT]+)/){
-	my $junc = $1;
-	my %comp = ();
-	map { $comp{$_}++ } split('',$junc);
+#    if ($F[4] =~ /([ACGT]+)[\[\]]|[\[\]]([ACGT]+)/){
+#	my $junc = $1;
+#	my %comp = ();
+#	map { $comp{$_}++ } split('',$junc);
 
 #	next if (length($junc) > $junctionLength && (max(values %comp)/length($junc)) > $junctionComp);
-    }
+#    }
 
     if ($F[7] =~ /CONTIG=([ACGTNactgn]+)/){
 	my $contig = $1;
 	# contigs can have a maximum of 35% of one base
-	my %comp = ();
-	map { $comp{$_}++ } split('',$contig);
+#	my %comp = ();
+#	map { $comp{$_}++ } split('',$contig);
 
 #	next if (max(values %comp)/length($contig)) > $contigComp;
 	
