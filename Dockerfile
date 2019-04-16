@@ -206,7 +206,7 @@ COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
 COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
-COPY Chromoseq.v8.cromwell34.hg38.wdl /opt/files/Chromoseq.v8.cromwell34.hg38.wdl
+COPY Chromoseq_basespace.v9.wdl /opt/files/Chromoseq_basespace.v9.wdl
 COPY all_sequences.dict /opt/files/all_sequences.dict
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
