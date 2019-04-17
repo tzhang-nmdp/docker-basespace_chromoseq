@@ -1,0 +1,7 @@
+Files Chromoseq.v9.wdl, application.new.conf, and LaunchChromoSeqFromCram.sh are for running locally (LSF) at MGI
+
+Chromoseq_basespace.v9.wdl has all runtime attributes stripped, since the basespace cromwell workflow currently operates on a single node and is not configured to launch each job in a new container
+
+launch_and_monitor_chromoseq.pl is for launching basespace from MGI
+
+Instructions on running basespace and other information is written in https://confluence.ris.wustl.edu/display/CI/Basespace+SOP
