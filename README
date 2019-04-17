@@ -5,3 +5,7 @@ Chromoseq_basespace.v9.wdl has all runtime attributes stripped, since the basesp
 launch_and_monitor_chromoseq.pl is for launching basespace from MGI
 
 Instructions on running basespace and other information is written in https://confluence.ris.wustl.edu/display/CI/Basespace+SOP
+
+forms & callbacks.js are configuration files from basespace that control the app input parameters and the command line instructions used to launch the app- these must be manually updated
+current versions were last modified on 4/4/19
+these can be accessed by logging in to the MGI organization and going to https://developer.basespace.illumina.com/apps/6984978/forms/revisions
