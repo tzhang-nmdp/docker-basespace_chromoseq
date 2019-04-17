@@ -9,7 +9,7 @@ function launchSpec(dataProvider)
         //commandLine: ["cat", "data/input/AppSession.json"],
         //commandLine: ['find', '/'],
         commandLine: ['python', '-u', '/opt/files/driver.py'],
-        containerImageId: "johnegarza/chromoseq",
+        containerImageId: "johnegarza/chromoseq:v9",
         Options: [ "bsfs.enabled=true" ]
     };
     return ret;
