@@ -220,8 +220,8 @@ task count_reads {
 
   command {
     set -eo pipefail && \
-    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C' > /tmp/windows.bed && \
+    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
     /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
   }
@@ -294,7 +294,7 @@ task run_varscan {
   String Name
     
   command <<<
-    /usr/local/bin/samtools mpileup -f ${refFasta}".gz" -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
+    /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.snv.vcf && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
