@@ -204,7 +204,7 @@ while(<T>){
   my $popfreq = 0.0;
   my $csblfreq = 0.0;
   
-  if ($l[7] =~ /SVLEN=(\d+);/){
+  if ($l[7] =~ /SVLEN=-*(\d+);/){
     $len = $1;
   }
   if ($l[7] =~ /POPFREQ_AF=(\S+?);/){
