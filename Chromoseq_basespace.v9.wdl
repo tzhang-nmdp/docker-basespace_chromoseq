@@ -317,7 +317,7 @@ task run_pindel_region {
   String Name
   
   command <<<
-    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
+    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
     /usr/local/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
     /usr/local/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R hg38 -d hg38 -v pindel.vcf && \
     /bin/sed 's/END=[0-9]*\;//' pindel.vcf > ${Name}.pindel.vcf
