@@ -221,13 +221,13 @@ task count_reads {
   command {
     set -eo pipefail && \
     (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed) && \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/${Chrom}.windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
   output {
-    File counts_bed = "counts.bed"
+    File counts_bed = "${Chrom}.counts.bed"
   }
 }
 
@@ -472,7 +472,7 @@ task make_report {
   String Name
   
   command {
-    perl /opt/files/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
+    perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
   }
   
   
