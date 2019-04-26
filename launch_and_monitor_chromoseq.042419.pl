@@ -9,10 +9,10 @@ my $usage = "Usage: $0 -name <project-name> -out <outdir> <LIMS dir 1> [LIMS dir
 
 my $BS = '/usr/local/bin/bs';
 
-my $DRAGENAPP = 6495489;
-my $CHROMOSEQAPP = 6984978;
+my $DRAGENAPP = 6495489; #v3.2.8, ID taken from url: https://basespace.illumina.com/apps/6495489/DRAGEN-Somatic-Pipeline
+my $CHROMOSEQAPP = 6984978; #V1.0.0, ID taken from url: https://basespace.illumina.com/apps/6984978/Chromoseq
 
-my $RefId = 14321367413;
+my $RefId = 14321367413; #see README for the steps used to find this
 
 my $debug = "";
 

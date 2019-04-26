@@ -4,6 +4,7 @@ workflow ChromoSeq {
   String CramIndex
   String Name
   String OutputDir
+  String Reference
 
   String Translocations = "/opt/files/ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe"
   String SVBed = "/opt/files/ChromoSeq.translocations.qc.bed"
@@ -14,7 +15,6 @@ workflow ChromoSeq {
   String SVBlacklist = "/opt/files/all.stranded.filtered.merged.bedpe.gz"
   String Blacklist = "/opt/files/hg38.blacklist.merged.bed"
     
-  String Reference = "/opt/files/all_sequences.fa"
   String ReferenceIndex = "/opt/files/all_sequences.fa.fai"
   String ReferenceBED = "/opt/files/all_sequences.fa.bed.gz"
   String Dictionary = "/opt/files/all_sequences.dict"

@@ -6,9 +6,9 @@ import glob, json, os, subprocess, sys
 os.chdir('/opt/files')
 
 #decompress reference fasta file
-print('Decompressing reference fasta...')
-subprocess.check_call(['gunzip', 'all_sequences.fa.gz'])
-print('Done decompressing')
+#print('Decompressing reference fasta...')
+#subprocess.check_call(['gunzip', 'all_sequences.fa.gz'])
+#print('Done decompressing')
 
 #download and setup VEP cache
 print('Downloading VEP cache, this may take a while...')
@@ -39,9 +39,14 @@ crai_search = glob.glob('/data/input/appresults/*/*.crai')
 if len(crai_search) != 1:
     print('Error- expected 1 crai file but found {0}'.format(len(cram_search)))
     sys.exit(1)
+ref_search = glob.glob('/data/input/appresults/*/*.fa')
+if len(ref_search) != 1:
+    print('Error- expected 1 reference fasta file but found {0}'.format(len(ref_search)))
+    sys.exit(1)
 
 cram_file = cram_search[0]
 crai_file = crai_search[0]
+ref_file = ref_search[0]
 name = cram_file.split("/")[-1].split(".")[0]
 
 #basespace-specified directory structure: /data/output/appresults/<project-id>/[directory_with_appresult_name]/[your_files]
@@ -55,6 +60,7 @@ wf_inputs_dict = \
     "ChromoSeq.CramIndex": crai_file,
     "ChromoSeq.Name": name,
     "ChromoSeq.OutputDir": output_dir
+    "ChromoSeq.Reference": ref_file 
 }
 
 with open("/opt/files/inputs.json", "w+") as f:
@@ -83,6 +89,7 @@ metadata_json_template = \
         }
     ]
 }
+#TODO does metadata need to be tracked for/did any of the above indices change because of the addition of the reference fa field
 metadata_json_template['Properties'][0]['Items'].append(file_href) #TODO should all files be included here? if not this line can be deleted and assignment placed inline
 
 with open(metadata_outfile, "w+") as f:
