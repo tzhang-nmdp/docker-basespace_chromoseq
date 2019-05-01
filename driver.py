@@ -46,8 +46,11 @@ if len(ref_search) != 1:
 
 cram_file = cram_search[0]
 crai_file = crai_search[0]
-ref_file = ref_search[0]
+ref_file_temp = ref_search[0]
 name = cram_file.split("/")[-1].split(".")[0]
+
+ref_file = '/opt/files/all_sequences.fa'
+subprocess.check_call(['ln', '-s', ref_file_temp, ref_file])
 
 #basespace-specified directory structure: /data/output/appresults/<project-id>/[directory_with_appresult_name]/[your_files]
 output_dir = "/data/output/appresults/{0}/{1}".format(project_id, name) 
@@ -59,7 +62,7 @@ wf_inputs_dict = \
     "ChromoSeq.Cram": cram_file,
     "ChromoSeq.CramIndex": crai_file,
     "ChromoSeq.Name": name,
-    "ChromoSeq.OutputDir": output_dir
+    "ChromoSeq.OutputDir": output_dir,
     "ChromoSeq.Reference": ref_file 
 }
 

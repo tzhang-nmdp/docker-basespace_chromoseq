@@ -13,6 +13,7 @@ my $DRAGENAPP = 6495489; #v3.2.8, ID taken from url: https://basespace.illumina.
 my $CHROMOSEQAPP = 6984978; #V1.0.0, ID taken from url: https://basespace.illumina.com/apps/6984978/Chromoseq
 
 my $RefId = 14321367413; #see README for the steps used to find this
+my $ref_fasta = 14477433053; #also explained in README
 
 my $debug = "";
 
@@ -118,7 +119,7 @@ my $files = join(",",@cram);
 
 # launch chromoseq
 $label = "Chromoseq $biosamplename " . localtime();
-my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o file-id:$files -f json | tee $outdir/$biosamplename.$manifest{index_illumina}{analysis_id}.chromoseq.json`);
+my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o file-id:$files -o ref-fa-id:$ref_fasta -f json | tee $outdir/$biosamplename.$manifest{index_illumina}{analysis_id}.chromoseq.json`);
 
 my $chromoseq_result = from_json(`$BS await appsession $chromoseq_session->{Id} -f json`);
 
