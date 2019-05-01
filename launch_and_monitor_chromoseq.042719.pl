@@ -14,6 +14,7 @@ my $DRAGENGERMLINEAPP = 6840834;
 my $CHROMOSEQAPP = 6984978;
 
 my $RefId = 14321367413;
+my $ref_fasta = 14477433053;
 
 my $debug = "";
 
@@ -150,7 +151,7 @@ if ($dragensession){
   
   # launch chromoseq
   my $label = "Chromoseq $biosamplename " . localtime();
-  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$RefId -o file-id:$files -f json | tee $outdir/$biosamplename.chromoseq.json`);
+  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$ref_fasta -o file-id:$files -f json | tee $outdir/$biosamplename.chromoseq.json`);
 
   print STDERR "Launching Chromoseq: $label. Waiting...\n";
   
