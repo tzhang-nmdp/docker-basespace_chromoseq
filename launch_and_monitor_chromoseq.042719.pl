@@ -14,6 +14,7 @@ my $DRAGENGERMLINEAPP = 6840834;
 my $CHROMOSEQAPP = 6984978;
 
 my $RefId = 14321367413;
+my $ref_fasta = 14477433053;
 
 my $debug = "";
 
@@ -68,8 +69,10 @@ if (scalar @ARGV > 0){
   die "Multiple directories with different sample/library information detected!" if scalar keys %datasets > 1;
   
   ## get dataset info, make biosample, and upload
-  my %manifest = (); #%{$datasets{(keys %datasets)[0]}};
+  my %manifest = %{$datasets{(keys %datasets)[0]}};
   $biosamplename = $manifest{sample}{full_name};
+
+  die "Sample name not found" if !$biosamplename;
   
   $biosamplename = $biosamplename . "-DEBUG" if $debug;
   
@@ -150,7 +153,7 @@ if ($dragensession){
   
   # launch chromoseq
   my $label = "Chromoseq $biosamplename " . localtime();
-  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$RefId -o file-id:$files -f json | tee $outdir/$biosamplename.chromoseq.json`);
+  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$ref_fasta -o file-id:$files -f json | tee $outdir/$biosamplename.chromoseq.json`);
 
   print STDERR "Launching Chromoseq: $label. Waiting...\n";
   
