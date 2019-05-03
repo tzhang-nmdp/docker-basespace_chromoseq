@@ -69,8 +69,10 @@ if (scalar @ARGV > 0){
   die "Multiple directories with different sample/library information detected!" if scalar keys %datasets > 1;
   
   ## get dataset info, make biosample, and upload
-  my %manifest = (); #%{$datasets{(keys %datasets)[0]}};
+  my %manifest = %{$datasets{(keys %datasets)[0]}};
   $biosamplename = $manifest{sample}{full_name};
+
+  die "Sample name not found" if !$biosamplename;
   
   $biosamplename = $biosamplename . "-DEBUG" if $debug;
   
