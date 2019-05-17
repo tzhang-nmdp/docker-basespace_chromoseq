@@ -1,4 +1,4 @@
-FROM dhspence/docker-genomic-analysis:latest
+FROM dhspence/docker-genomic-analysis:5
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
 LABEL description="Heavy container for Chromoseq"

@@ -352,7 +352,7 @@ while(<F>){
     chomp;
     my @F = split("\t",$_);
 
-    splice(@F,6,4);
+#    splice(@F,6,4);
 
     next if $F[10]=~/synonymous|UTR|stream/ || $F[5] eq 'FilteredInAll';
     
