@@ -252,9 +252,9 @@ task count_reads {
   command {
     set -eo pipefail && \
     (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \ 
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed) && \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/${Chrom}.windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > counts.bed
   }
 
   runtime {
@@ -264,7 +264,7 @@ task count_reads {
     job_group: jobGroup
   }
   output {
-    File counts_bed = "counts.bed"
+    File counts_bed = "${Chrom}.counts.bed"
   }
 }
 
@@ -369,7 +369,7 @@ task run_pindel_region {
   String jobGroup
   
   command <<<
-    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
+    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
     /usr/local/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
     /usr/local/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R hg38 -d hg38 -v pindel.vcf && \
     /bin/sed 's/END=[0-9]*\;//' pindel.vcf > ${Name}.pindel.vcf
@@ -480,7 +480,8 @@ task combine_variants {
   command {
     /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
     --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
-    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o ${Name}.combined_tagged.vcf
+    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o /tmp/combined.vcf && \
+    /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
   }
   runtime {
     docker_image: "johnegarza/chromoseq:latest"
@@ -516,7 +517,7 @@ task annotate_variants {
     /usr/bin/java -Xmx4g -jar /opt/GenomeAnalysisTK.jar -T VariantsToTable \
     -R ${refFasta} --variant ${Name}.annotated_filtered.vcf.gz -o ${Name}.variants.tsv \
     -F CHROM -F POS -F ID -F REF -F ALT -F set \
-    -GF GT -GF RD -GF AD -GF FREQ && \
+    -GF GT -GF NR -GF NV -GF VAF && \
     /opt/conda/envs/python2/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
     mv variants.annotated.tsv ${Name}.variants_annotated.tsv; else touch ${Name}.variants_annotated.tsv; fi
     
@@ -573,7 +574,7 @@ task make_report {
   String jobGroup
   
   command {
-    perl /opt/files/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
+    perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
   }
   
   runtime {
