@@ -107,16 +107,22 @@ workflow ChromoSeq {
 #    jobGroup=JobGroup
 #  }
   
-  call combine_variants {
+  call combine_variants1 {
     input: VarscanSNV=run_varscan.varscan_snv_file,
     VarscanIndel=run_varscan.varscan_indel_file,
     PindelITD=run_pindel_flt3itd.pindel_vcf_file,
-    Bam=Cram,
-    BamIndex=CramIndex,
     refFasta=Reference,
-    Name=Name,
     jobGroup=JobGroup
   }
+  call combine_variants2 {
+    input: refFasta=Reference,
+    Bam=Cram,
+    BamIndex=CramIndex,
+    Name=Name,
+    combined_intermediate=combine_variants1.temp_combined_vcf,
+    jobGroup=JobGroup
+  }
+  
   
   call annotate_variants {
     input: Vcf=combine_variants.combined_vcf_file,
@@ -466,33 +472,54 @@ task make_bw {
 }           
   
 
-task combine_variants {
+task combine_variants1 {
   String VarscanSNV
   String VarscanIndel
   String PindelITD
 #  String Platypus
-  String Bam
-  String BamIndex
   String refFasta
-  String Name
   String jobGroup
   
   command {
     /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
     --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
-    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o /tmp/combined.vcf && \
-    /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
+    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o temp_combined_out.vcf
   }
   runtime {
     docker_image: "johnegarza/chromoseq:latest"
     cpu: "1"
-    memory: "10 G"
+    memory: "16 G"
     job_group: jobGroup
   }
   output {
-    File combined_vcf_file = "${Name}.combined_tagged.vcf"
+    File temp_combined_vcf = "temp_combined_out.vcf"
   }
   
+}
+
+task combine_variants2 {
+  String refFasta
+  String Bam
+  String BamIndex
+  String Name
+  String combined_intermediate
+  String jobGroup
+
+  command {
+    python /usr/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${c_v2} ${Bam} ${Name} > ${Name}.combined_tagged.vcf
+  }
+
+  runtime {
+    docker_image: "johnegarza/chromoseq-pysam:latest"
+    cpu: "1"
+    memory: "8 G"
+    job_group: jobGroup
+  }
+
+  output {
+    File combined_vcf_file = "${Name}.combined_tagged.vcf"
+  }
+
 }
 
 task annotate_variants {
