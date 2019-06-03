@@ -107,19 +107,25 @@ workflow ChromoSeq {
 #    jobGroup=JobGroup
 #  }
   
-  call combine_variants {
+  call combine_variants1 {
     input: VarscanSNV=run_varscan.varscan_snv_file,
     VarscanIndel=run_varscan.varscan_indel_file,
     PindelITD=run_pindel_flt3itd.pindel_vcf_file,
+    refFasta=Reference,
+    jobGroup=JobGroup
+  }
+  call combine_variants2 {
+    input: refFasta=Reference,
     Bam=Cram,
     BamIndex=CramIndex,
-    refFasta=Reference,
     Name=Name,
+    combined_intermediate=combine_variants1.temp_combined_vcf,
     jobGroup=JobGroup
   }
   
+  
   call annotate_variants {
-    input: Vcf=combine_variants.combined_vcf_file,
+    input: Vcf=combine_variants2.combined_vcf_file,
     refFasta=Reference,
     Vepcache=VEP,
     Name=Name,
@@ -251,10 +257,8 @@ task count_reads {
 
   command {
     set -eo pipefail && \
-    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \ 
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/${Chrom}.windows.bed) && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > ${Chrom}.counts.bed
+    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | /usr/bin/awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${Chrom}.windows.bed) && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
   runtime {
@@ -466,33 +470,54 @@ task make_bw {
 }           
   
 
-task combine_variants {
+task combine_variants1 {
   String VarscanSNV
   String VarscanIndel
   String PindelITD
 #  String Platypus
-  String Bam
-  String BamIndex
   String refFasta
-  String Name
   String jobGroup
   
   command {
     /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
     --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
-    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o /tmp/combined.vcf && \
-    /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
+    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o temp_combined_out.vcf
   }
   runtime {
     docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
-    memory: "10 G"
+    memory: "16 G"
     job_group: jobGroup
   }
   output {
-    File combined_vcf_file = "${Name}.combined_tagged.vcf"
+    File temp_combined_vcf = "temp_combined_out.vcf"
   }
   
+}
+
+task combine_variants2 {
+  String refFasta
+  String Bam
+  String BamIndex
+  String Name
+  String combined_intermediate
+  String jobGroup
+
+  command {
+    python /usr/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${combined_intermediate} ${Bam} ${Name} > ${Name}.combined_tagged.vcf
+  }
+
+  runtime {
+    docker: "johnegarza/chromoseq-pysam:latest"
+    cpu: "1"
+    memory: "8 G"
+    job_group: jobGroup
+  }
+
+  output {
+    File combined_vcf_file = "${Name}.combined_tagged.vcf"
+  }
+
 }
 
 task annotate_variants {
@@ -518,7 +543,7 @@ task annotate_variants {
     -R ${refFasta} --variant ${Name}.annotated_filtered.vcf.gz -o ${Name}.variants.tsv \
     -F CHROM -F POS -F ID -F REF -F ALT -F set \
     -GF GT -GF NR -GF NV -GF VAF && \
-    /opt/conda/envs/python2/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
+    /opt/conda/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
     mv variants.annotated.tsv ${Name}.variants_annotated.tsv; else touch ${Name}.variants_annotated.tsv; fi
     
   }
