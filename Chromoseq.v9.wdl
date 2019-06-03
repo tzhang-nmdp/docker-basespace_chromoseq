@@ -190,7 +190,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -226,10 +226,10 @@ task run_manta {
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVBlacklist} | \
     /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort > ${Name}.tumorSV.vcf && \
     perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
-    bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
+    /opt/htslib/bin/bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -254,11 +254,11 @@ task count_reads {
     (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \ 
     awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/${Chrom}.windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > counts.bed
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "8 G"
     job_group: jobGroup
@@ -306,7 +306,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -347,7 +347,7 @@ task run_varscan {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "2"
     memory: "16 G"
     job_group: jobGroup
@@ -376,7 +376,7 @@ task run_pindel_region {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -403,7 +403,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -427,7 +427,7 @@ task subset_cram {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -455,7 +455,7 @@ task make_bw {
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -484,7 +484,7 @@ task combine_variants {
     /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -523,7 +523,7 @@ task annotate_variants {
     
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -551,7 +551,7 @@ task annotate_svs {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -578,7 +578,7 @@ task make_report {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker: "johnegarza/chromoseq:v9.2"
     job_group: jobGroup
   }
   
@@ -608,7 +608,7 @@ task make_igv {
   }
   
   runtime {
-    docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
+    docker: "ubuntu:xenial"
   }
   
   output {
@@ -625,7 +625,7 @@ task remove_files {
     /bin/rm ${sep=" " files}
   }
   runtime {
-    docker_image: "ubuntu:xenial"
+    docker: "ubuntu:xenial"
     job_group: jobGroup
   }
   output {
@@ -642,7 +642,7 @@ task gather_files {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
   }
   runtime {
-    docker_image: "ubuntu:xenial"
+    docker: "ubuntu:xenial"
   }
   output {
     String done = stdout()

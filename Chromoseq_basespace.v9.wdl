@@ -202,7 +202,7 @@ task run_manta {
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVBlacklist} | \
     /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort > ${Name}.tumorSV.vcf && \
     perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
-    bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
+    /opt/htslib/bin/bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   output {
     File filtered_vcf = "${Name}.tumorSV.filtered.vcf.gz"
