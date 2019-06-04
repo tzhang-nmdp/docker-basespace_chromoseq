@@ -1,5 +1,5 @@
-#FROM dhspence/docker-genomic-analysis:6
-FROM johnegarza/genome-utils:v0.1
+FROM dhspence/docker-genomic-analysis:6
+#FROM johnegarza/genome-utils:v0.1
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
 LABEL description="Heavy container for Chromoseq"
