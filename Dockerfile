@@ -1,4 +1,4 @@
-FROM dhspence/docker-genomic-analysis:6
+FROM dhspence/docker-genomic-analysis:latest
 #FROM johnegarza/genome-utils:v0.1
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
