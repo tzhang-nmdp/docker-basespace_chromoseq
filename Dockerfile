@@ -1,5 +1,5 @@
 #FROM dhspence/docker-genomic-analysis:6
-FROM johnegarza/genome-utils:v0.1
+FROM johnegarza/genome-utils:v0.2
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
 LABEL description="Heavy container for Chromoseq"
@@ -219,7 +219,7 @@ COPY driver.py /opt/files/driver.py
 #RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
 
 RUN git clone https://github.com/broadinstitute/ichorCNA.git
-RUN Rscript -e "install.packages(c('plyr', 'optparse')); source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb')"
+RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomeInfoDb'))"
 RUN R CMD INSTALL ichorCNA
 
 RUN chmod a+wrx /opt/files/*
