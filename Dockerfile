@@ -216,11 +216,12 @@ COPY driver.py /opt/files/driver.py
 #RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
 #       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
 
+#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
 #RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
 
-RUN git clone https://github.com/broadinstitute/ichorCNA.git
-RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomeInfoDb'))"
-RUN R CMD INSTALL ichorCNA
+#RUN git clone https://github.com/broadinstitute/ichorCNA.git
+#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
+#RUN R CMD INSTALL ichorCNA
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
