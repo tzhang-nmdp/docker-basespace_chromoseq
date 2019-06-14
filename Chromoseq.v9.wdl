@@ -196,7 +196,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -235,7 +235,7 @@ task run_manta {
     /opt/htslib/bin/bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -262,7 +262,7 @@ task count_reads {
   }
 
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "8 G"
     job_group: jobGroup
@@ -310,7 +310,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/ichor:latest"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -351,7 +351,7 @@ task run_varscan {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "2"
     memory: "16 G"
     job_group: jobGroup
@@ -380,7 +380,7 @@ task run_pindel_region {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -407,7 +407,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -431,7 +431,7 @@ task subset_cram {
   }
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -459,7 +459,7 @@ task make_bw {
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -484,7 +484,7 @@ task combine_variants1 {
     /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o temp_combined_out.vcf
   }
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -548,7 +548,7 @@ task annotate_variants {
     
   }
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -576,7 +576,7 @@ task annotate_svs {
   }
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -603,7 +603,7 @@ task make_report {
   }
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.3"
+    docker: "johnegarza/chromoseq:v9.4"
     job_group: jobGroup
   }
   
