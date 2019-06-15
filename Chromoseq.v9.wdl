@@ -310,7 +310,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker: "johnegarza/ichor:latest"
+    docker: "johnegarza/ichor:v0.2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
