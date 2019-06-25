@@ -123,9 +123,9 @@ if ($biosamplename){
   
   die "Dragen failed! Check logs for AppSession: $align_result->{AppSession}{Name}" if ($align_result->{AppSession}{ExecutionStatus} !~ /Complete/);
 
-  print STDERR "Dragen finished. Downloading QC data\n";
+  print STDERR "Dragen finished. Downloading data\n";
   
-  `$BS dataset download -i $align_result->{Id} --extension=csv -o $outdir`;
+  `$BS dataset download -i $align_result->{Id} -o $outdir`;
 
   $dragensession = $align_result->{AppSession}{Id};
 }
