@@ -1,8 +1,199 @@
-FROM dhspence/docker-genomic-analysis:latest
-#FROM johnegarza/genome-utils:v0.1
+FROM ubuntu:xenial
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
 LABEL description="Heavy container for Chromoseq"
+
+RUN apt-get update && apt-get install -y --no-install-recommends locales && \
+    echo "en_US.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen en_US.UTF-8 && \
+    LC_ALL=en_US.UTF-8 && \
+    LANG=en_US.UTF-8 && \
+    /usr/sbin/update-locale LANG=en_US.UTF-8 && \
+    TERM=xterm
+
+RUN apt-get update -y && apt-get install -y --no-install-recommends \
+    build-essential \
+    bzip2 \
+    curl \
+    default-jdk \
+    default-jre \
+    g++ \
+    git \
+    less \
+    libcurl4-openssl-dev \
+    libpng-dev \
+    libssl-dev \
+    libxml2-dev \
+    make \
+    ncurses-dev \
+    nodejs \
+    pkg-config \
+    python \
+    unzip \
+    wget \
+    zip \
+    libbz2-dev \
+    ca-certificates \
+    file \
+    fonts-texgyre \
+    g++ \
+    gfortran \
+    gsfonts \
+    libbz2-1.0 \
+    libcurl3 \
+    libicu55 \
+    libjpeg-turbo8 \
+    libopenblas-dev \
+    libpangocairo-1.0-0 \
+    libpcre3 \
+    libpng12-0 \
+    libtiff5 \
+    liblzma5 \
+    locales \
+    zlib1g \
+    libbz2-dev \
+    libcairo2-dev \
+    libcurl4-openssl-dev \
+    libpango1.0-dev \
+    libjpeg-dev \
+    libicu-dev \
+    libpcre3-dev \
+    libpng-dev \
+    libreadline-dev \
+    libtiff5-dev \
+    liblzma-dev \
+    libx11-dev \
+    libxt-dev \
+    perl \
+    x11proto-core-dev \
+    xauth \
+    xfonts-base \
+    xvfb \
+    zlib1g-dev \
+    bc \
+    libnss-sss
+
+
+##############
+#HTSlib 1.9#
+##############
+ENV HTSLIB_INSTALL_DIR=/opt/htslib
+
+WORKDIR /tmp
+RUN wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 && \
+    tar --bzip2 -xvf htslib-1.9.tar.bz2 && \
+    cd /tmp/htslib-1.9 && \
+    ./configure --enable-plugins --prefix=$HTSLIB_INSTALL_DIR && \
+    make && \
+    make install && \
+    cp $HTSLIB_INSTALL_DIR/lib/libhts.so* /usr/lib/ && \
+    ln -s $HTSLIB_INSTALL_DIR/bin/tabix /usr/bin/tabix
+
+################
+#Samtools 1.9#
+################
+ENV SAMTOOLS_INSTALL_DIR=/opt/samtools
+
+WORKDIR /tmp
+RUN wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 && \
+    tar --bzip2 -xf samtools-1.9.tar.bz2 && \
+    cd /tmp/samtools-1.9 && \
+    ./configure --with-htslib=$HTSLIB_INSTALL_DIR --prefix=$SAMTOOLS_INSTALL_DIR && \
+    make && \
+    make install && \
+    ln -s /opt/samtools/bin/* /usr/local/bin/ && \
+    cd / && \
+    rm -rf /tmp/samtools-1.9
+
+
+##############
+## bedtools ##
+
+WORKDIR /usr/local
+RUN git clone https://github.com/arq5x/bedtools2.git && \
+    cd /usr/local/bedtools2 && \
+    git checkout v2.27.0 && \
+    make && \
+    ln -s /usr/local/bedtools2/bin/* /usr/local/bin/
+
+############################
+# R, bioconductor packages #
+ARG R_VERSION
+ENV R_VERSION=${R_VERSION:-3.6.0}
+RUN cd /tmp/ && \
+    ## Download source code
+    curl -O https://cran.r-project.org/src/base/R-3/R-${R_VERSION}.tar.gz && \
+    ## Extract source code
+    tar -xf R-${R_VERSION}.tar.gz && \
+    cd R-${R_VERSION} && \
+    ## Set compiler flags
+    R_PAPERSIZE=letter && \
+    R_BATCHSAVE="--no-save --no-restore" && \
+    R_BROWSER=xdg-open && \
+    PAGER=/usr/bin/pager && \
+    PERL=/usr/bin/perl && \
+    R_UNZIPCMD=/usr/bin/unzip && \
+    R_ZIPCMD=/usr/bin/zip && \
+    R_PRINTCMD=/usr/bin/lpr && \
+    LIBnn=lib && \
+    AWK=/usr/bin/awk && \
+    CFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g" && \
+    CXXFLAGS="-g -O2 -fstack-protector-strong -Wformat -Werror=format-security -Wdate-time -D_FORTIFY_SOURCE=2 -g" && \
+    ## Configure options
+    ./configure --enable-R-shlib \
+               --enable-memory-profiling \
+               --with-readline \
+               --with-blas="-lopenblas" \
+               --disable-nls \
+               --without-recommended-packages && \
+    ## Build and install
+    make && \
+    make install && \
+    ## Add a default CRAN mirror
+    echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl')" >> /usr/local/lib/R/etc/Rprofile.site && \
+    ## Add a library directory (for user-installed packages)
+    mkdir -p /usr/local/lib/R/site-library && \
+    chown root:staff /usr/local/lib/R/site-library && \
+    chmod g+wx /usr/local/lib/R/site-library && \
+    ## Fix library path
+    echo "R_LIBS_USER='/usr/local/lib/R/site-library'" >> /usr/local/lib/R/etc/Renviron && \
+    echo "R_LIBS=\${R_LIBS-'/usr/local/lib/R/site-library:/usr/local/lib/R/library:/usr/lib/R/library'}" >> /usr/local/lib/R/etc/Renviron
+   
+##########################################
+# Install conda and all python stuff
+##########################################
+
+# Configure environment
+ENV CONDA_DIR /opt/conda
+ENV PATH $CONDA_DIR/bin:$PATH
+
+RUN cd /tmp && \
+    mkdir -p $CONDA_DIR && \
+    curl -s https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -o miniconda.sh && \
+    /bin/bash miniconda.sh -f -b -p $CONDA_DIR && \
+    rm miniconda.sh && \
+    $CONDA_DIR/bin/conda config --system --add channels conda-forge && \
+    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+    conda clean -tipsy
+
+RUN conda config --add channels bioconda && \
+    conda install -c conda-forge petl && \
+    conda install -c anaconda biopython && \
+    conda install -c anaconda scipy && \
+    conda install -y -c bioconda mosdepth
+
+RUN cd /tmp && git clone https://github.com/pysam-developers/pysam.git && \
+    cd pysam && \
+    export HTSLIB_LIBRARY_DIR=$HTSLIB_INSTALL_DIR/lib && \
+    export HTSLIB_INCLUDE_DIR=$HTSLIB_INSTALL_DIR/include && \
+    python setup.py install
+
+# Install Python 2 
+RUN conda create --quiet --yes -p $CONDA_DIR/envs/python2 python=2.7 'pip' && \
+    conda clean -tipsy && \
+    /bin/bash -c "source activate python2 && \
+    conda install -c bioconda svtools && \
+    source deactivate"
 
 #
 #  install manta
@@ -13,32 +204,7 @@ RUN wget https://github.com/Illumina/manta/releases/download/v${manta_version}/m
     tar -jxvf manta-${manta_version}.centos6_x86_64.tar.bz2 && \
     mv manta-${manta_version}.centos6_x86_64 /usr/local/src/manta
 
-#
-# install hmmcopy and ichor
-# 
-RUN apt-get update && \
-    apt-get install -y build-essential \
-    	    	       cmake \
-		       python-dev \
-    		       python-pip \
-                       git \
-                       wget \
-                       autoconf \
-                       zlib1g-dev \
-  		       fort77 \
-		       liblzma-dev  \
-		       libblas-dev \
-		       gfortran \
-		       gcc-multilib \
-		       gobjc++ \
-		       aptitude \
-		       libreadline-dev \
-		       python-dev \
-		       libpcre3 \
-		       libpcre3-dev \
-                       default-jdk
-		       
-
+       
 ENV VARSCAN_INSTALL_DIR=/opt/varscan
 
 WORKDIR $VARSCAN_INSTALL_DIR
@@ -48,29 +214,18 @@ RUN wget https://github.com/dkoboldt/varscan/releases/download/2.4.2/VarScan.v2.
 #
 # pindel
 #
-WORKDIR /opt
-RUN wget https://github.com/samtools/samtools/releases/download/1.2/samtools-1.2.tar.bz2 && \
-  tar xvjf samtools-1.2.tar.bz2
-
-WORKDIR /opt/samtools-1.2
-RUN make
 
 WORKDIR /opt
 RUN wget https://github.com/genome/pindel/archive/v0.2.5b8.tar.gz && \
   tar -xzf v0.2.5b8.tar.gz
 
 WORKDIR /opt/pindel-0.2.5b8
-RUN ./INSTALL /opt/samtools-1.2/htslib-1.2.1
+RUN ./INSTALL $HTSLIB_INSTALL_DIR
 
 WORKDIR /
 RUN ln -s /opt/pindel-0.2.5b8/pindel /usr/local/bin/pindel && \
     ln -s /opt/pindel-0.2.5b8/pindel2vcf /usr/local/bin/pindel2vcf
 
-###############
-# Octopus
-###############
-
-#RUN conda install -y -c conda-forge -c bioconda octopus
 
 #
 # GATK
@@ -96,19 +251,22 @@ RUN cd /opt/ && unzip /tmp/${maven_package_name}-bin.zip \
     && rm -rf /opt/${gatk_dir_name}-${gatk_version} /opt/${maven_package_name}
 
 #
-# pysam and scipy
-#
-
-RUN conda config --add channels r && conda config --add channels bioconda && conda install -c conda-forge petl && \
-    conda install -c anaconda biopython && conda install -c anaconda scipy && conda install pysam
-
-#
 # blat
 #
 
 WORKDIR /usr/local/bin/
 RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
     chmod a+x blat
+
+
+############
+# ichorCNA #
+############
+
+RUN git clone https://github.com/broadinstitute/ichorCNA.git
+RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb'))"
+RUN R CMD INSTALL ichorCNA
+
 
 ########
 #VEP 90#
@@ -128,29 +286,6 @@ RUN perl INSTALL.pl --NO_UPDATE
 WORKDIR /
 RUN ln -s /opt/vep/ensembl-vep/vep /usr/bin/variant_effect_predictor.pl
 
-
-RUN conda install -y -c bioconda cyvcf2 htslib samtools deeptools mosdepth
-
-RUN export PATH=$PATH:/opt/conda/bin/ && \
-    /bin/bash -c "source activate python2 && conda install -c bioconda svtools && source deactivate"
-
-#
-# Cleanup
-#
-
-## Clean up
-RUN cd / && \
-   rm -rf /tmp/* && \
-   apt-get autoremove -y && \
-   apt-get autoclean -y && \
-   rm -rf /var/lib/apt/lists/* && \
-   apt-get clean && \
-   rm -f /opt/*.bz2 /opt/*.gz
-   
-
-RUN mkdir -p /opt/lib/perl/VEP/Plugins && chmod a+wrx /opt/lib/perl/VEP/Plugins 
-COPY Downstream.pm /opt/lib/perl/VEP/Plugins/Downstream.pm
-COPY Wildtype.pm /opt/lib/perl/VEP/Plugins/Wildtype.pm
 
 #install docker, instructions from https://docs.docker.com/install/linux/docker-ce/ubuntu/#install-using-the-repository
 RUN apt-get update && apt-get install -y \
@@ -173,6 +308,19 @@ RUN apt-get install -y docker-ce
 
 WORKDIR /opt/
 RUN wget https://github.com/broadinstitute/cromwell/releases/download/36/cromwell-36.jar
+
+#
+# Cleanup
+#
+
+## Clean up
+RUN cd / && \
+   rm -rf /tmp/* && \
+   apt-get autoremove -y && \
+   apt-get autoclean -y && \
+   rm -rf /var/lib/apt/lists/* && \
+   apt-get clean && \
+   rm -f /opt/*.bz2 /opt/*.gz
 
 RUN mkdir /opt/files/
 
@@ -202,35 +350,6 @@ COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 COPY driver.py /opt/files/driver.py
 
-
-#RUN cd /opt/ && \
-#    git config --global http.sslVerify false && \
-#    git clone --recursive https://github.com/shahcompbio/hmmcopy_utils.git && \
-#    cd /opt/hmmcopy_utils && \
-#    cmake . && \
-#    make && \
-#    cp bin/* /usr/local/bin/
-
-#RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb'); install.packages(c('devtools','optparse'))"
-#RUN Rscript --default-packages=devtools -e "install_github('broadinstitute/ichorCNA')"
-#RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
-#       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
-
-#RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
-
-RUN git clone https://github.com/broadinstitute/ichorCNA.git
-RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb'))"
-RUN R CMD INSTALL ichorCNA
-
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
-
-#WORKDIR /opt/
-#RUN conda install --yes 'pip' && \
-#    conda clean -tipsy && \
-#    pip install cmake==3.13
-    
-#RUN git clone -b master https://github.com/luntergroup/octopus.git && \
-#    cd octopus && \
-#    /opt/conda/bin/python ./scripts/install.py 
 
