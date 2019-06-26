@@ -204,7 +204,7 @@ while(<T>){
   my $popfreq = 0.0;
   my $csblfreq = 0.0;
   
-  if ($l[7] =~ /SVLEN=(\d+);/){
+  if ($l[7] =~ /SVLEN=-*(\d+);/){
     $len = $1;
   }
   if ($l[7] =~ /POPFREQ_AF=(\S+?);/){
@@ -416,7 +416,9 @@ my $svt = '';
 
 foreach my $v (@list){
 
-  next if defined($t2{$v}[14]) and $t2{$v}[14] ne '';
+  next if defined($t2{$v}[14]) and $t2{$v}[14] ne ''; # if this one was already reported as a hotspot event then skip
+
+  next if !defined($t2{$t2{$v}[13]}); # if only one end passed all the filters then skip
   
   if ($v eq 'space' and scalar @list2 > 0){
     print "\n\nPreviously unreported high-confidence structural variants\n\n";

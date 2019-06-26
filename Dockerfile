@@ -1,4 +1,5 @@
-FROM dhspence/docker-genomic-analysis:5
+FROM dhspence/docker-genomic-analysis:latest
+#FROM johnegarza/genome-utils:v0.1
 MAINTAINER David H. Spencer <dspencer@wustl.edu>
 
 LABEL description="Heavy container for Chromoseq"
@@ -37,18 +38,6 @@ RUN apt-get update && \
 		       libpcre3-dev \
                        default-jdk
 		       
-RUN cd /opt/ && \
-    git config --global http.sslVerify false && \
-    git clone --recursive https://github.com/shahcompbio/hmmcopy_utils.git && \
-    cd /opt/hmmcopy_utils && \
-    cmake . && \
-    make && \
-    cp bin/* /usr/local/bin/
-
-RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb'); install.packages(c('devtools','optparse'))"
-RUN Rscript --default-packages=devtools -e "install_github('broadinstitute/ichorCNA')"
-RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
-       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
 
 ENV VARSCAN_INSTALL_DIR=/opt/varscan
 
@@ -211,8 +200,27 @@ COPY all_sequences.dict /opt/files/all_sequences.dict
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
-COPY all_sequences.fa.gz /opt/files/all_sequences.fa.gz
 COPY driver.py /opt/files/driver.py
+
+
+#RUN cd /opt/ && \
+#    git config --global http.sslVerify false && \
+#    git clone --recursive https://github.com/shahcompbio/hmmcopy_utils.git && \
+#    cd /opt/hmmcopy_utils && \
+#    cmake . && \
+#    make && \
+#    cp bin/* /usr/local/bin/
+
+#RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb'); install.packages(c('devtools','optparse'))"
+#RUN Rscript --default-packages=devtools -e "install_github('broadinstitute/ichorCNA')"
+#RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
+#       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
+
+#RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
+
+RUN git clone https://github.com/broadinstitute/ichorCNA.git
+RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb'))"
+RUN R CMD INSTALL ichorCNA
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
