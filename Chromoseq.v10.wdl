@@ -282,11 +282,7 @@ task run_ichor {
     set -eo pipefail && \
     cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
     awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-<<<<<<< HEAD
-    /usr/local/bin/Rscript  /usr/local/bin/ichorCNA/scripts/runIchorCNA.R \ 
-=======
     /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R \
->>>>>>> 308ac22699473f5f928cce8f8fa522354b54d5d0
     --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig /usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig \
