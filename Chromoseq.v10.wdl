@@ -190,7 +190,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -229,7 +229,7 @@ task run_manta {
     bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -251,14 +251,12 @@ task count_reads {
 
   command {
     set -eo pipefail && \
-    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \ 
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed) && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
+    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
   }
 
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "8 G"
     job_group: jobGroup
@@ -284,7 +282,7 @@ task run_ichor {
     set -eo pipefail && \
     cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
     awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /usr/local/bin/runIchorCNA.R \
+    /usr/local/bin/Rscript  /usr/local/bin/ichorCNA/scripts/runIchorCNA.R \ 
     --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig /usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig \
@@ -293,7 +291,7 @@ task run_ichor {
     --normalPanel /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds \
     --includeHOMD False --chrs "c(1:22, \"X\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     awk -v OFS="\t" '$7!=2 && NR>1 { print $2,$3,$4,$5,$6,$7,$8,$9; }' "${Name}.seg.txt" > results.bed && \
     if [[ -s results.bed ]]; then /usr/local/bin/intersectBed -a results.bed -b ${Bed} -wa -wb | \
     /usr/local/bin/bedtools groupby -g 1,2,3,4,5,6,7 -c 12,12,13,13,14 -o distinct,count_distinct,distinct,count_distinct,distinct >> "${Name}.cnv_report.txt"; else touch "${Name}.cnv_report.txt"; fi && \
@@ -306,7 +304,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -340,14 +338,14 @@ task run_varscan {
     
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
-    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.snv.vcf && \
-    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.indel.vcf
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "2"
     memory: "16 G"
     job_group: jobGroup
@@ -376,7 +374,7 @@ task run_pindel_region {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -403,7 +401,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -427,7 +425,7 @@ task subset_cram {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -455,7 +453,7 @@ task make_bw {
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -484,7 +482,7 @@ task combine_variants {
     	  /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -523,7 +521,7 @@ task annotate_variants {
     
   }
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -551,7 +549,7 @@ task annotate_svs {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -578,7 +576,7 @@ task make_report {
   }
   
   runtime {
-    docker_image: "johnegarza/chromoseq:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     job_group: jobGroup
   }
   
