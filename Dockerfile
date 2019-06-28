@@ -178,7 +178,7 @@ RUN cd /tmp && \
 
 RUN conda config --add channels bioconda && \
     conda install -c conda-forge petl && \
-    conda install -c anaconda biopython scipy cython && \
+    conda install -c anaconda biopython scipy cython cyvcf2 && \
     conda install -y -c bioconda mosdepth
 
 RUN cd /tmp && git clone https://github.com/pysam-developers/pysam.git && \
@@ -276,7 +276,7 @@ RUN R CMD INSTALL ichorCNA
 #VEP 90#
 ########
 
-RUN cpan install DBI && cpan install Module::Build.pm
+RUN cpan install DBI && cpan install Module::Build.pm && cpan install JSON 
 
 RUN mkdir /opt/vep/
 WORKDIR /opt/vep
