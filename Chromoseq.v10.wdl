@@ -284,7 +284,7 @@ task run_ichor {
     set -eo pipefail && \
     cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
     awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /usr/local/bin/runIchorCNA.R \
+    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R \
     --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig /usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig \
@@ -293,7 +293,7 @@ task run_ichor {
     --normalPanel /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds \
     --includeHOMD False --chrs "c(1:22, \"X\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     awk -v OFS="\t" '$7!=2 && NR>1 { print $2,$3,$4,$5,$6,$7,$8,$9; }' "${Name}.seg.txt" > results.bed && \
     if [[ -s results.bed ]]; then /usr/local/bin/intersectBed -a results.bed -b ${Bed} -wa -wb | \
     /usr/local/bin/bedtools groupby -g 1,2,3,4,5,6,7 -c 12,12,13,13,14 -o distinct,count_distinct,distinct,count_distinct,distinct >> "${Name}.cnv_report.txt"; else touch "${Name}.cnv_report.txt"; fi && \
