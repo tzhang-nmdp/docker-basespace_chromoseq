@@ -178,8 +178,7 @@ RUN cd /tmp && \
 
 RUN conda config --add channels bioconda && \
     conda install -c conda-forge petl && \
-    conda install -c anaconda biopython && \
-    conda install -c anaconda scipy && \
+    conda install -c anaconda biopython scipy cython && \
     conda install -y -c bioconda mosdepth
 
 RUN cd /tmp && git clone https://github.com/pysam-developers/pysam.git && \
@@ -250,21 +249,26 @@ RUN cd /opt/ && unzip /tmp/${maven_package_name}-bin.zip \
     && mv /opt/${gatk_dir_name}-${gatk_version}/protected/gatk-package-distribution/target/gatk-package-distribution-${gatk_version}.jar /opt/GenomeAnalysisTK.jar \
     && rm -rf /opt/${gatk_dir_name}-${gatk_version} /opt/${maven_package_name}
 
-#
-# blat
-#
+
+##################
+# blat and ucsc utilities #
 
 WORKDIR /usr/local/bin/
 RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
     chmod a+x blat
 
+RUN mkdir -p /tmp/ucsc && \
+    cd /tmp/ucsc && \
+    wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bedGraphToBigWig && \
+    chmod ugo+x * && \
+    mv * /usr/bin/
 
 ############
 # ichorCNA #
 ############
 
 RUN git clone https://github.com/broadinstitute/ichorCNA.git
-RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb'))"
+RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb','GenomicRanges'))"
 RUN R CMD INSTALL ichorCNA
 
 
@@ -343,7 +347,6 @@ COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
 COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
-COPY Chromoseq_basespace.v9.wdl /opt/files/Chromoseq_basespace.v9.wdl
 COPY all_sequences.dict /opt/files/all_sequences.dict
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
