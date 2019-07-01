@@ -282,8 +282,7 @@ task run_ichor {
     set -eo pipefail && \
     cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
     awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R \
-    --id ${Name} \
+    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig /usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig \
     --mapWig /usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig \
@@ -411,33 +410,6 @@ task run_platypus {
   }
 }
 
-task subset_cram {
-  String Cram
-  String CramIndex
-  String refFasta
-  String Bed
-  String Name
-  String jobGroup
-  
-  command {
-    /usr/local/bin/samtools view -T ${refFasta} -L ${Bed} -b -o "${Name}.subset.bam" ${Cram} && \
-    /usr/local/bin/samtools index "${Name}.subset.bam"
-  }
-  
-  runtime {
-    docker_image: "dhspence/docker-basespace_chromoseq:v2"
-    cpu: "1"
-    memory: "16 G"
-    job_group: jobGroup
-  }
-  
-  output {
-    File bamfile = "${Name}.subset.bam"
-    File bamindex = "${Name}.subset.bam.bai"
-  }
-  
-}
-
 task make_bw {
   String in
   String index
@@ -503,7 +475,7 @@ task annotate_variants {
   
   command {
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
-    --format vcf --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick -o ${Name}.annotated.vcf \
+    --format vcf --vcf --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick -o ${Name}.annotated.vcf \
     -i ${Vcf} --offline --cache --af_gnomad --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
@@ -516,7 +488,7 @@ task annotate_variants {
     -R ${refFasta} --variant ${Name}.annotated_filtered.vcf.gz -o ${Name}.variants.tsv \
     -F CHROM -F POS -F ID -F REF -F ALT -F set \
     -GF GT -GF RD -GF AD -GF FREQ && \
-    /opt/conda/envs/python2/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
+    /opt/conda/bin/python /usr/local/bin/add_annotations_to_table_helper.py ${Name}.variants.tsv ${Name}.annotated_filtered.vcf.gz Consequence,SYMBOL,Feature_type,Feature,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons,HGNC_ID,gnomAD_AF,gnomAD_AFR_AF,gnomAD_AMR_AF,gnomAD_ASJ_AF,gnomAD_EAS_AF,gnomAD_FIN_AF,gnomAD_NFE_AF,gnomAD_OTH_AF,gnomAD_SAS_AF,CLIN_SIG,SOMATIC,PHENO ./ && \
     mv variants.annotated.tsv ${Name}.variants_annotated.tsv; else touch ${Name}.variants_annotated.tsv; fi
     
   }
@@ -542,7 +514,7 @@ task annotate_svs {
   
   command {
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
-    --format vcf --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --symbol --term SO --flag_pick -o ${Name}.svs_annotated.vcf \
+    --format vcf --vcf --fasta ${refFasta} --symbol --term SO --flag_pick -o ${Name}.svs_annotated.vcf \
     -i ${Vcf} --offline --cache --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.svs_annotated.vcf > ${Name}.svs_annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz
@@ -572,7 +544,7 @@ task make_report {
   String jobGroup
   
   command {
-    perl /opt/files/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
+    perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
   }
   
   runtime {

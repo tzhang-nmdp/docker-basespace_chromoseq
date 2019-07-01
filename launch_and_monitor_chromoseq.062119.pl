@@ -26,7 +26,7 @@ my $biosamplename = '';
 my $chromoseqsession = '';
 
 GetOptions("debug" => \$debug,
-	   "b|biosample" => \$biosamplename,
+	   "b|biosample=s" => \$biosamplename,
 	   "p|project=s" => \$ProjectName,
 	   "d|dragen=s" => \$dragensession,
 	   "c|chromoseq=s" => \$chromoseqsession,
