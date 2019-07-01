@@ -1,0 +1,66 @@
+
+inputs:
+	ichorCNA segs.txt file
+	manta VCF
+	translocation BEDPE
+
+dependencies:
+	pysam
+	Bio.SearchIO.BlatIO
+	blat
+	bedtools
+
+
+script:
+
+read manta VCF
+
+for each VCF record:
+
+    if contig exists:
+       print contig sequence to multi-fasta file with the Manta ID as the name
+
+compare multi-fasta against reference (I used blat with this command: blat -fastMap -noHead ref.fa input.fa out.psl, but one could use bwa or minimap2)
+
+parse alignment output
+
+for each alignment record:
+
+   if aligned bases are >30 and percent identity >95% (or something like this):
+      store the chromosome, score, start, and end of hit, keyed on the query ID (this is the Manta ID)
+
+read manta VCF again
+
+for each VCF record:
+
+    if there arent m SR reads and n PR reads:
+       add filter flag (e.g., "LowReads")
+
+    if there is no contig for the record:
+       add "NoContig" filter
+       
+    if contig alignments for that event do not include DISTINCT hits
+    	  within X bp of each breakend (ie, the masklevel for the hits
+    	  is <20%):
+    	  add "FailedContig" tag
+
+   if breakends for the record are contained within a 'hotspot' bedpe file:
+      tag record with "HOTSPOT_TRANS" or some similar tag in the INFO
+      field
+      
+   print modified record to file
+
+
+read in segs.txt file
+
+for each line with CNV (not 'NEUT'):
+
+    make new VCF record as DUP or DEL. Store log2ratio and other
+    relevant fields
+    
+    print line as VCF record
+
+
+
+
+   
