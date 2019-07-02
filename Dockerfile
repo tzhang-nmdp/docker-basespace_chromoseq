@@ -272,6 +272,16 @@ RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManag
 RUN R CMD INSTALL ichorCNA
 
 
+#
+#
+#
+
+RUN cd /opt/ && git clone https://github.com/lh3/minimap2 && \
+    cd minimap2 && make && \
+    cp minimap2 /usr/local/bin/ && \
+    rm -Rf minimap2
+
+
 ########
 #VEP 90#
 ########
