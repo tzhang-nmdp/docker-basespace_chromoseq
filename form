@@ -35,6 +35,15 @@
             "rules": "is-project-owner"
         },
         {
+            "$type": "FileChooser",
+            "size": 500,
+            "valueType": "Input",
+            "extensionFilters": ".fa, .fasta", 
+            "label": "Reference fasta",
+            "requiredMessage": "Please choose a reference",
+            "id": "ref-fa-id"
+        },
+        {
             "$type": "SectionBreak"
         }
     ],

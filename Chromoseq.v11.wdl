@@ -107,25 +107,19 @@ workflow ChromoSeq {
 #    jobGroup=JobGroup
 #  }
   
-  call combine_variants1 {
+  call combine_variants {
     input: VarscanSNV=run_varscan.varscan_snv_file,
     VarscanIndel=run_varscan.varscan_indel_file,
     PindelITD=run_pindel_flt3itd.pindel_vcf_file,
-    refFasta=Reference,
-    jobGroup=JobGroup
-  }
-  call combine_variants2 {
-    input: refFasta=Reference,
     Bam=Cram,
     BamIndex=CramIndex,
+    refFasta=Reference,
     Name=Name,
-    combined_intermediate=combine_variants1.temp_combined_vcf,
     jobGroup=JobGroup
   }
   
-  
   call annotate_variants {
-    input: Vcf=combine_variants2.combined_vcf_file,
+    input: Vcf=combine_variants.combined_vcf_file,
     refFasta=Reference,
     Vepcache=VEP,
     Name=Name,
@@ -196,7 +190,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -217,8 +211,6 @@ task run_manta {
   String Name
   String Reference
   String ReferenceBED
-  String SVAnnot
-  String SVBlacklist
   String jobGroup
   
   command <<<
@@ -226,25 +218,21 @@ task run_manta {
     /usr/local/src/manta/bin/configManta.py --config=/opt/files/configManta.hg38.py.ini --tumorBam=${Bam} --referenceFasta=${Reference} \
     --runDir=manta --callRegions=${ReferenceBED} --outputContig && \
     ./manta/runWorkflow.py -m local -q research-hpc -j 4 -g 32 && \
-    /opt/conda/envs/python2/bin/python /usr/local/src/manta/libexec/convertInversion.py /usr/local/bin/samtools ${Reference} ./manta/results/variants/tumorSV.vcf.gz | \
-    /opt/conda/envs/python2/bin/svtools afreq | /opt/conda/envs/python2/bin/svtools vcftobedpe -i stdin | \
-    /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c POPFREQ -a stdin -b ${SVAnnot} | \
-    /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVBlacklist} | \
-    /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort > ${Name}.tumorSV.vcf && \
-    perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
-    /opt/htslib/bin/bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
+    mv ./manta/results/variants/tumorSV.vcf.gz ${Name}.tumorSV.vcf.gz && \
+    mv ./manta/results/variants/tumorSV.vcf.gz.tbi ${Name}.tumorSV.vcf.gz.tbi    
   >>>
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
   }
   output {
-    File filtered_vcf = "${Name}.tumorSV.filtered.vcf.gz"
-    File filtered_index = "${Name}.tumorSV.filtered.vcf.gz.tbi"
+    File vcf = "${Name}.tumorSV.vcf.gz"
+    File vcf_index = "${Name}.tumorSV.vcf.gz.tbi"
   }
 }
+
 
 task count_reads {
   String Bam
@@ -257,18 +245,18 @@ task count_reads {
 
   command {
     set -eo pipefail && \
-    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | /usr/bin/awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${Chrom}.windows.bed) && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${Chrom}.windows.bed > ${Chrom}.counts.bed
+    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
   }
 
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "8 G"
     job_group: jobGroup
   }
   output {
-    File counts_bed = "${Chrom}.counts.bed"
+    File counts_bed = "counts.bed"
   }
 }
 
@@ -288,8 +276,7 @@ task run_ichor {
     set -eo pipefail && \
     cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
     awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /usr/local/bin/runIchorCNA.R \
-    --id ${Name} \
+    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig /usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig \
     --mapWig /usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig \
@@ -297,7 +284,7 @@ task run_ichor {
     --normalPanel /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds \
     --includeHOMD False --chrs "c(1:22, \"X\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     awk -v OFS="\t" '$7!=2 && NR>1 { print $2,$3,$4,$5,$6,$7,$8,$9; }' "${Name}.seg.txt" > results.bed && \
     if [[ -s results.bed ]]; then /usr/local/bin/intersectBed -a results.bed -b ${Bed} -wa -wb | \
     /usr/local/bin/bedtools groupby -g 1,2,3,4,5,6,7 -c 12,12,13,13,14 -o distinct,count_distinct,distinct,count_distinct,distinct >> "${Name}.cnv_report.txt"; else touch "${Name}.cnv_report.txt"; fi && \
@@ -310,7 +297,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker: "johnegarza/ichor:v0.2"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -344,14 +331,14 @@ task run_varscan {
     
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > /tmp/mpileup.out && \
-    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp /tmp/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.snv.vcf && \
-    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=8 MinCov} --min-reads2 ${default=5 MinReads} \
+    java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel /tmp/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
     --min-var-freq ${default="0.02" MinFreq} --output-vcf > ${Name}.indel.vcf
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "2"
     memory: "16 G"
     job_group: jobGroup
@@ -373,14 +360,14 @@ task run_pindel_region {
   String jobGroup
   
   command <<<
-    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
+    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
     /usr/local/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
     /usr/local/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R hg38 -d hg38 -v pindel.vcf && \
     /bin/sed 's/END=[0-9]*\;//' pindel.vcf > ${Name}.pindel.vcf
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -407,7 +394,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -415,33 +402,6 @@ task run_platypus {
   output {
     File platypus_vcf_file = "${Name}.platypus.vcf"
   }
-}
-
-task subset_cram {
-  String Cram
-  String CramIndex
-  String refFasta
-  String Bed
-  String Name
-  String jobGroup
-  
-  command {
-    /usr/local/bin/samtools view -T ${refFasta} -L ${Bed} -b -o "${Name}.subset.bam" ${Cram} && \
-    /usr/local/bin/samtools index "${Name}.subset.bam"
-  }
-  
-  runtime {
-    docker: "johnegarza/chromoseq:v9.4"
-    cpu: "1"
-    memory: "16 G"
-    job_group: jobGroup
-  }
-  
-  output {
-    File bamfile = "${Name}.subset.bam"
-    File bamindex = "${Name}.subset.bam.bai"
-  }
-  
 }
 
 task make_bw {
@@ -459,7 +419,7 @@ task make_bw {
     --ignoreDuplicates -bl ${Blacklist} --binSize 50 --minMappingQuality 1 --extendReads -p 4 -ignore X Y MT
   }
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -470,54 +430,33 @@ task make_bw {
 }           
   
 
-task combine_variants1 {
+task combine_variants {
   String VarscanSNV
   String VarscanIndel
   String PindelITD
 #  String Platypus
-  String refFasta
-  String jobGroup
-  
-  command {
-    /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
-    --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
-    /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o temp_combined_out.vcf
-  }
-  runtime {
-    docker: "johnegarza/chromoseq:v9.4"
-    cpu: "1"
-    memory: "16 G"
-    job_group: jobGroup
-  }
-  output {
-    File temp_combined_vcf = "temp_combined_out.vcf"
-  }
-  
-}
-
-task combine_variants2 {
-  String refFasta
   String Bam
   String BamIndex
+  String refFasta
   String Name
-  String combined_intermediate
   String jobGroup
-
+  
   command {
-    python /usr/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${combined_intermediate} ${Bam} ${Name} > ${Name}.combined_tagged.vcf
+  	  /usr/bin/java -Xmx8g -jar /opt/GenomeAnalysisTK.jar -T CombineVariants -R ${refFasta} --variant:varscanIndel ${VarscanIndel} \
+    	  --variant:varscanSNV ${VarscanSNV} --variant:PindelITD ${PindelITD} -o /tmp/out.vcf --genotypemergeoption UNIQUIFY && \
+    	  /usr/bin/java -Xmx16g -jar /opt/GenomeAnalysisTK.jar -T LeftAlignAndTrimVariants -R ${refFasta} --variant /tmp/out.vcf -o /tmp/combined.vcf && \
+    	  /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} /tmp/combined.vcf ${Bam} ${Name} > ${Name}.combined_tagged.vcf
   }
-
   runtime {
-    docker: "johnegarza/chromoseq-pysam:latest"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
-    memory: "8 G"
+    memory: "10 G"
     job_group: jobGroup
   }
-
   output {
     File combined_vcf_file = "${Name}.combined_tagged.vcf"
   }
-
+  
 }
 
 task annotate_variants {
@@ -528,9 +467,9 @@ task annotate_variants {
   String Name
   String jobGroup
   
-  command {
+  command {    
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
-    --format vcf --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick -o ${Name}.annotated.vcf \
+    --format vcf --vcf --fasta ${refFasta} --hgvs --symbol --term SO --flag_pick -o ${Name}.annotated.vcf \
     -i ${Vcf} --offline --cache --af_gnomad --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
@@ -548,7 +487,7 @@ task annotate_variants {
     
   }
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -565,18 +504,26 @@ task annotate_svs {
   String refFasta
   String Vepcache
   String Name
+  String SVAnnot
+  String SVBlacklist
   String jobGroup
   
   command {
+    /opt/conda/envs/python2/bin/svtools afreq -i ${Vcf} | /opt/conda/envs/python2/bin/svtools vcftobedpe -i stdin | \
+    /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c POPFREQ -a stdin -b ${SVAnnot} | \
+    /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVBlacklist} | \
+    /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort > ${Name}.tumorSV.vcf && \
+    perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
+    bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
-    --format vcf --vcf --plugin Downstream --plugin Wildtype --fasta ${refFasta} --symbol --term SO --flag_pick -o ${Name}.svs_annotated.vcf \
+    --format vcf --vcf --fasta ${refFasta} --symbol --term SO --pick -o ${Name}.svs_annotated.vcf \
     -i ${Vcf} --offline --cache --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.svs_annotated.vcf > ${Name}.svs_annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz
   }
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -603,7 +550,7 @@ task make_report {
   }
   
   runtime {
-    docker: "johnegarza/chromoseq:v9.4"
+    docker_image: "dhspence/docker-basespace_chromoseq:v2"
     job_group: jobGroup
   }
   
@@ -633,7 +580,7 @@ task make_igv {
   }
   
   runtime {
-    docker: "ubuntu:xenial"
+    docker_image: "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
   }
   
   output {
@@ -650,7 +597,7 @@ task remove_files {
     /bin/rm ${sep=" " files}
   }
   runtime {
-    docker: "ubuntu:xenial"
+    docker_image: "ubuntu:xenial"
     job_group: jobGroup
   }
   output {
@@ -667,7 +614,7 @@ task gather_files {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
   }
   runtime {
-    docker: "ubuntu:xenial"
+    docker_image: "ubuntu:xenial"
   }
   output {
     String done = stdout()

@@ -203,7 +203,31 @@ RUN wget https://github.com/Illumina/manta/releases/download/v${manta_version}/m
     tar -jxvf manta-${manta_version}.centos6_x86_64.tar.bz2 && \
     mv manta-${manta_version}.centos6_x86_64 /usr/local/src/manta
 
-       
+#
+# install hmmcopy and ichor
+# 
+RUN apt-get update && \
+    apt-get install -y build-essential \
+    	    	       cmake \
+		       python-dev \
+    		       python-pip \
+                       git \
+                       wget \
+                       autoconf \
+                       zlib1g-dev \
+  		       fort77 \
+		       liblzma-dev  \
+		       libblas-dev \
+		       gfortran \
+		       gcc-multilib \
+		       gobjc++ \
+		       aptitude \
+		       libreadline-dev \
+		       python-dev \
+		       libpcre3 \
+		       libpcre3-dev \
+                       default-jdk
+		       
 ENV VARSCAN_INSTALL_DIR=/opt/varscan
 
 WORKDIR $VARSCAN_INSTALL_DIR
@@ -362,6 +386,27 @@ COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 COPY driver.py /opt/files/driver.py
+
+
+#RUN cd /opt/ && \
+#    git config --global http.sslVerify false && \
+#    git clone --recursive https://github.com/shahcompbio/hmmcopy_utils.git && \
+#    cd /opt/hmmcopy_utils && \
+#    cmake . && \
+#    make && \
+#    cp bin/* /usr/local/bin/
+
+#RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb'); install.packages(c('devtools','optparse'))"
+#RUN Rscript --default-packages=devtools -e "install_github('broadinstitute/ichorCNA')"
+#RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
+#       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
+
+#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
+#RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
+
+#RUN git clone https://github.com/broadinstitute/ichorCNA.git
+#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
+#RUN R CMD INSTALL ichorCNA
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*

@@ -4,6 +4,7 @@ workflow ChromoSeq {
   String CramIndex
   String Name
   String OutputDir
+  String Reference
 
   String Translocations = "/opt/files/ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe"
   String SVBed = "/opt/files/ChromoSeq.translocations.qc.bed"
@@ -14,7 +15,6 @@ workflow ChromoSeq {
   String SVBlacklist = "/opt/files/all.stranded.filtered.merged.bedpe.gz"
   String Blacklist = "/opt/files/hg38.blacklist.merged.bed"
     
-  String Reference = "/opt/files/all_sequences.fa"
   String ReferenceIndex = "/opt/files/all_sequences.fa.fai"
   String ReferenceBED = "/opt/files/all_sequences.fa.bed.gz"
   String Dictionary = "/opt/files/all_sequences.dict"
@@ -202,7 +202,7 @@ task run_manta {
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVBlacklist} | \
     /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort > ${Name}.tumorSV.vcf && \
     perl /usr/local/bin/BlatContigs.pl -r ${Reference} ${Name}.tumorSV.vcf ${Name}.tumorSV.filtered.vcf && \
-    bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
+    /opt/htslib/bin/bgzip ${Name}.tumorSV.filtered.vcf && tabix -p vcf ${Name}.tumorSV.filtered.vcf.gz
   >>>
   output {
     File filtered_vcf = "${Name}.tumorSV.filtered.vcf.gz"
@@ -221,13 +221,13 @@ task count_reads {
   command {
     set -eo pipefail && \
     (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/windows.bed) && \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > /tmp/${Chrom}.windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/windows.bed > counts.bed
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a /tmp/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
   output {
-    File counts_bed = "counts.bed"
+    File counts_bed = "${Chrom}.counts.bed"
   }
 }
 
@@ -317,7 +317,7 @@ task run_pindel_region {
   String Name
   
   command <<<
-    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
+    (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - /tmp/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
     /usr/local/bin/pindel -f ${refFasta} -p /tmp/in.pindel -c ${Reg} -o /tmp/out.pindel && \
     /usr/local/bin/pindel2vcf -P /tmp/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R hg38 -d hg38 -v pindel.vcf && \
     /bin/sed 's/END=[0-9]*\;//' pindel.vcf > ${Name}.pindel.vcf
@@ -473,7 +473,7 @@ task make_report {
   String Name
   
   command {
-    perl /opt/files/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
+    perl /usr/local/bin/ChromoSeqReporter.hg38.pl ${Name} ${VARS} ${CNV} ${VCF} > "${Name}.chromoseq.txt"
   }
   
   
