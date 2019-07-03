@@ -26,7 +26,7 @@ my $biosamplename = '';
 my $chromoseqsession = '';
 
 GetOptions("debug" => \$debug,
-	   "b|biosample" => \$biosamplename,
+	   "b|biosample=s" => \$biosamplename,
 	   "p|project=s" => \$ProjectName,
 	   "d|dragen=s" => \$dragensession,
 	   "c|chromoseq=s" => \$chromoseqsession,
@@ -70,7 +70,7 @@ if (scalar @ARGV > 0){
   
   ## get dataset info, make biosample, and upload
   my %manifest = %{$datasets{(keys %datasets)[0]}};
-  $biosamplename = $manifest{sample}{full_name};
+  $biosamplename = $manifest{library_summary}{full_name};
 
   die "Sample name not found" if !$biosamplename;
   
