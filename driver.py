@@ -99,6 +99,6 @@ with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
 print('\nLaunching cromwell')
-cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq_basespace.v9.wdl"]
+cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq_basespace.v10.wdl"]
 subprocess.check_call(cromwell_cmd)
 print('\nCromwell complete')

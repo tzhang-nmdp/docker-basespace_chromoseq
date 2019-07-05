@@ -386,6 +386,7 @@ COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 COPY driver.py /opt/files/driver.py
+COPY Chromoseq_basespace.v10.wdl /opt/files/Chromoseq_basespace.v10.wdl
 
 
 #RUN cd /opt/ && \
