@@ -147,8 +147,14 @@ for variant in genevcf:
     
     abundance = variant.format("VAF")[0][0] * 100
         
-    csyntax = genes[gene]['HGVSc'].split(":")[1]
-    psyntax = genes[gene]['HGVSp'].split(":")[1]
+    csyntax = 'NA'
+    if genes[gene]['HGVSc'] is not None and genes[gene]['HGVSc'] is not '':
+       csyntax = genes[gene]['HGVSc'].split(":")[1]
+       
+    psyntax = 'NA'
+    if genes[gene]['HGVSp'] is not None and genes[gene]['HGVSp'] is not '':
+        psyntax = genes[gene]['HGVSp'].split(":")[1]
+    
     pmaf = genes[gene]['gnomAD_AF']
     if pmaf is None or pmaf == '':
         pmaf = 'NA'
@@ -352,20 +358,19 @@ for v in passedvars.items():
                                 
         alt = variant.ALT[0]
         strand = '+'
-        p = re.compile('^[ACTGactg]+\]|\[[ACTGactg]+$')
-        if p.match(alt):
+        if alt.find("[") == 0 or alt.find("]") > 0:
             strand = '-'
             
         csyntax = '';
         psyntax = '';
-        if chr1.replace('chr','') > chr2.replace('chr',''):                
+        if chr1.replace('chr','') < chr2.replace('chr',''): # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
             csyntax = chr1 + ":g." + str(pos1) + "(+)::" + chr2 + ":g." + str(pos2) + "(" + strand + ")"
             psyntax = 't(' + chr1.replace('chr','') + ';' + chr2.replace('chr','') + ')(' + bands1[0] + bands2[0] + ')'
         else:
             csyntax = chr2 + ":g." + str(pos2) + "(+)::" + chr1 + ":g." + str(pos1) + "(" + strand + ")"
             psyntax = 't(' + chr2.replace('chr','') + ';' + chr1.replace('chr','') + ')(' + bands2[0] + bands1[0] + ')'
                 
-        out = [vartype,chr1,str(pos1),chr2,str(pos2),str(svlen),bandstr,knowngenestring,csyntax,psyntax,genestring,filter,str(numhits),str(variant.ID) + ";" + str(mate.ID),str(round(abundance,1))+"%",str(pr[1]) + '/' + str(pr[0]+pr[1]),str(sr[1]) + '/' + str(sr[0]+sr[1]),str(variant.INFO.get('CONTIG'))]
+        out = [vartype,chr1,str(pos1),chr2,str(pos2),"NA",bandstr,knowngenestring,csyntax,psyntax,genestring,filter,str(numhits),str(variant.ID) + ";" + str(mate.ID),str(round(abundance,1))+"%",str(pr[1]) + '/' + str(pr[0]+pr[1]),str(sr[1]) + '/' + str(sr[0]+sr[1]),str(variant.INFO.get('CONTIG'))]
 
         alreadydone.add(variant.ID)
         

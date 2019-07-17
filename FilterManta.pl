@@ -15,7 +15,7 @@ my $masklevel = 0.8;
 my $PR = 2;
 my $SR = 2;
 
-my $minMQ = 1;
+my $minMQ = 0;
 my $fracIdent = 0.95;
 
 my $knownfile = '';
@@ -86,7 +86,7 @@ my %hits = (); # hash of hits
 my %totalhits = ();
 
 # map fastq file to reference with minimap2 and iterate through records
-open(SAM,"$minimap -N 50 -p 0.5 --mask-level 0.8 -ax sr $refseq $tmp/input.fq |") || die;
+open(SAM,"$minimap -N 50 -p 0.5 --mask-level 0.8 -ax sr $refseq $tmp/input.fq | tee minimap.sam |") || die;
 open(D,">minimap.tsv") || die;
 while(<SAM>){
     chomp;
@@ -242,7 +242,7 @@ while(<VCF>){
 	    $pos2 = $1;
 	    
 	} elsif ($F[2] =~ /BND/) {
-	    $F[4] =~/(chr\S+):(\d+)/;
+	    $F[4] =~/([^\[\]]+):(\d+)/;
 	    
 	    $chr1 = $F[0];
 	    $pos1 = $F[1];
