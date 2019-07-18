@@ -146,6 +146,7 @@ workflow ChromoSeq {
     input: Vcf=run_manta.vcf,
     CNV=run_ichor.seg,
     refFasta=Reference,
+    refFastaIndex=ReferenceIndex,
     Vepcache=VEP,
     SVAnnot=SVDB,
     Translocations=Translocations,
@@ -526,6 +527,7 @@ task annotate_svs {
   String Vcf
   String CNV
   String refFasta
+  String refFastaIndex
   String Vepcache
   String Name
   String jobGroup
@@ -537,10 +539,10 @@ task annotate_svs {
   
   command {
     set -eo pipefail && \
-    perl /gscmnt/gc2555/spencer/dhs/projects/chromoseq/ichorToVCF.pl -r ${refFasta} ${CNV} | bgzip -c > cnv.vcf.gz && \
+    perl /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/ichorToVCF.pl -r ${refFasta} ${CNV} | bgzip -c > cnv.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf cnv.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools query -l cnv.vcf.gz > name.txt && \
-    perl /gscmnt/gc2555/spencer/dhs/projects/chromoseq/FilterManta.pl -r ${refFasta} -k ${Translocations} ${Vcf} filtered.vcf && \
+    perl /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/FilterManta.pl -r ${refFasta} -k ${Translocations} ${Vcf} filtered.vcf && \
     /opt/conda/envs/python2/bin/svtools afreq filtered.vcf | \
     /opt/conda/envs/python2/bin/svtools vcftobedpe -i stdin | \
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVAnnot} | \
@@ -549,7 +551,7 @@ task annotate_svs {
     /opt/conda/envs/python2/bin/bcftools reheader -s name.txt filtered.tagged.vcf.gz > filtered.tagged.reheader.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf filtered.tagged.reheader.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools concat -a cnv.vcf.gz filtered.tagged.reheader.vcf.gz | \
-    /opt/conda/envs/python2/bin/svtools vcfsort | bgzip -c > svs.vcf.gz && \
+    /usr/local/bin/bedtools sort -header -g ${refFastaIndex} -i stdin | bgzip -c > svs.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl --format vcf --vcf --fasta ${refFasta} --per_gene --symbol --term SO -o ${Name}.svs_annotated.vcf -i svs.vcf.gz --custom ${Cytobands},cytobands,bed --offline --cache --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.svs_annotated.vcf > ${Name}.svs_annotated.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz

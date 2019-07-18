@@ -108,8 +108,8 @@ while(<SAM>){
     my @l=split(",",$1); 
 
     # check strand of primary hit
-    my $strand = "+"; 
-    $strand = "-" if $flag & hex("0x10"); 
+    my $pstrand = "+"; 
+    $pstrand = "-" if $flag & hex("0x10"); 
 
     /NM:i:(\d+)/;
     my $pnm = $1;
@@ -122,37 +122,44 @@ while(<SAM>){
     while($cigar =~ /(\d+)([MSHDI])/g){ # get cigar operation
 	my $s = $1;
 	my $o = $2;
-	my $qlen += $s if $s ne 'D'; # add to the query length unless its a del
+	$qlen += $s if $s ne 'D'; # add to the query length unless its a del
 	$st += $s if ($o =~ /S|H/ and $alen == 0); # change start position iff this is the first operation and its a clip 
 	$alen += $s if ($o =~ /[MI]/); # add to the alignment length if its a M or I
     }
     my $pid = 1 - $pnm / $alen;
-    my @p = ($st,$st+$alen-1); # make array with (start,end)
-    @p = reverse(map { $qlen - $_ } @p) if ($strand eq '-'); # reverse if its a minus strand hit
+    my @p = ($st+1,$st+$alen-1); # make array with (start,end)
+    @p = reverse(map { $qlen - $_ } @p) if ($pstrand eq '-'); # reverse if its a minus strand hit
 
+    map { die "parse cigar failed" if $_ < 0 or $_ > $qlen } @p;
+    
     # do same for supplemental cigar
     my $scigar = $l[3];
     my $snm = $l[5];
+    my $sstrand = $l[2];
     $st = 0;
     $alen = 0;
     $qlen = 0;
     while($scigar =~ /(\d+)([MSHDI])/g){
         my $s = $1;
         my $o = $2;
-        my $qlen += $s if $s ne 'D'; # add to the query length unless its a del
+        $qlen += $s if $s ne 'D'; # add to the query length unless its a del
         $st += $s if ($o =~ /S|H/ and $alen == 0); # change start position iff this is the first operation and its a clip
 	$alen += $s if ($o =~ /[MI]/); # add to the alignment length if its a M or I
     }
     my $sid = 1 - $snm / $alen;
     my @s = ($st,$st+$alen-1);
-    @s = reverse(map { $qlen - $_ } @s) if ($strand eq '-');
+    @s = reverse(map { $qlen - $_ } @s) if ($sstrand eq '-');
 
-    # calculate MASKLEVEL (100 - MASKLEVEL) == fraction of query that overlaps between primary and supplemental hits 
+    map { die "parse cigar failed" if $_ < 0 or $_ > $qlen } @s;
+    
+    # calculate MASKLEVEL (1.0 - MASKLEVEL) == fraction of query that overlaps between primary and supplemental hits 
     my $ov = 0;
     unless ($s[0] > $p[1] or $p[0] > $s[1]){
 	$ov = (min($p[1],$s[1]) - max($p[0],$s[0])) / min($p[1]-$p[0],$s[1]-$s[0]);
     }
 
+    die "masklevel failed" if $ov < 0 or $ov > 1;
+    
     my $mq = ($F[4] < $l[4] ? $F[4] : $l[4]);
     # skip if masklevel threshold exceeded
     next if $ov > (1 - $masklevel);
@@ -160,8 +167,8 @@ while(<SAM>){
     next unless $mq >= $minMQ && $pid > $fracIdent && $sid > $fracIdent;
 
     # store hits
-    push @{$hits{$F[0]}}, [ $F[2],$F[3]-1,$F[3],$l[0],$l[1]-1,$l[1],$F[0],$mq,$strand,$l[2],$F[5] . ";" . $l[3] ];
-    print D join("\t",$F[2],$F[3]-1,$F[3],$l[0],$l[1]-1,$l[1],$F[0],$mq,$strand,$l[2],$F[5] . ";" . $l[3]),"\n";
+    push @{$hits{$F[0]}}, [ $F[2],$F[3]-1,$F[3],$l[0],$l[1]-1,$l[1],$F[0],$mq,$pstrand,$sstrand,$F[5] . ";" . $l[3] ];
+    print D join("\t",$F[2],$F[3]-1,$F[3],$l[0],$l[1]-1,$l[1],$F[0],$mq,$pstrand,$sstrand,$F[5] . ";" . $l[3]),"\n";
 }
 close SAM;
 close D;
