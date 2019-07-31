@@ -237,7 +237,7 @@ for v in passedvars.items():
         bands = transcripts[0]['cytobands'].split("&")
         bandstr = bands[0]
         if len(bands) > 1:
-            bandstr = bands[0] + '-' + bands[-1]
+            bandstr = bands[0] + bands[-1]
 
         knowngenes = gs.intersection(knowngenelist)
         knowngenestring = ",".join(knowngenes)
@@ -365,10 +365,10 @@ for v in passedvars.items():
         psyntax = '';
         if chr1.replace('chr','') < chr2.replace('chr',''): # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
             csyntax = chr1 + ":g." + str(pos1) + "(+)::" + chr2 + ":g." + str(pos2) + "(" + strand + ")"
-            psyntax = 't(' + chr1.replace('chr','') + ';' + chr2.replace('chr','') + ')(' + bands1[0] + bands2[0] + ')'
+            psyntax = 't(' + chr1.replace('chr','') + ';' + chr2.replace('chr','') + ')(' + bands1[0] + ';' + bands2[0] + ')'
         else:
             csyntax = chr2 + ":g." + str(pos2) + "(+)::" + chr1 + ":g." + str(pos1) + "(" + strand + ")"
-            psyntax = 't(' + chr2.replace('chr','') + ';' + chr1.replace('chr','') + ')(' + bands2[0] + bands1[0] + ')'
+            psyntax = 't(' + chr2.replace('chr','') + ';' + chr1.replace('chr','') + ')(' + bands2[0] + ';' + bands1[0] + ')'
                 
         out = [vartype,chr1,str(pos1),chr2,str(pos2),"NA",bandstr,knowngenestring,csyntax,psyntax,genestring,filter,str(numhits),str(variant.ID) + ";" + str(mate.ID),str(round(abundance,1))+"%",str(pr[1]) + '/' + str(pr[0]+pr[1]),str(sr[1]) + '/' + str(sr[0]+sr[1]),str(variant.INFO.get('CONTIG'))]
 
