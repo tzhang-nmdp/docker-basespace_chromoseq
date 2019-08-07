@@ -24,7 +24,7 @@ workflow ChromoSeq {
   
   String JobGroup = "/dspencer/chromoseq"  
 
-  String chromoseq_docker = "dhspence/docker-basespace_chromoseq:v4"
+  String chromoseq_docker = "dhspence/docker-basespace_chromoseq:v5"
   
   call prepare_bed {
     input: Bedpe=Translocations,
