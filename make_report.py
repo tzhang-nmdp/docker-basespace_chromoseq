@@ -155,7 +155,7 @@ for variant in genevcf:
     if genes[gene]['HGVSp'] is not None and genes[gene]['HGVSp'] is not '':
         psyntax = genes[gene]['HGVSp'].split(":")[1]
     
-    pmaf = genes[gene]['gnomAD_AF']
+    pmaf = genes[gene]['gnomAD_AF'] # check for exac_AF too. This fails on b37 cases
     if pmaf is None or pmaf == '':
         pmaf = 'NA'
     else:
