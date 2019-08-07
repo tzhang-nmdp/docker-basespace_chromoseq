@@ -319,9 +319,16 @@ COPY make_report.py /usr/local/bin/make_report.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
+
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
+
+COPY chromoseq_genes.bed /opt/files/chromoseq_genes.bed
+COPY hg38.cytoBandIdeo.bed.gz /opt/files/hg38.cytoBandIdeo.bed.gz
+COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
+COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
+
 COPY driver.py /opt/files/driver.py
 
 RUN chmod a+wrx /opt/files/*
