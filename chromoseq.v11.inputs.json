@@ -12,7 +12,7 @@
     "ChromoSeq.Translocations": "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/hg38_files/chromoseq_translocations.bedpe",
     
     "ChromoSeq.JobGroup": "/dspencer/chromoseq",    
-    "ChromoSeq.chromoseq_docker": "dhspence/docker-basespace_chromoseq:v4",
+    "ChromoSeq.chromoseq_docker": "dhspence/docker-basespace_chromoseq:v5",
     
     "ChromoSeq.OutputDir": "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/new_annotations/test",
     "ChromoSeq.Name": "TEST",
