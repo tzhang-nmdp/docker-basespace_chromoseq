@@ -427,7 +427,7 @@ else:
 
 print("*** OTHER HIGH-CONFIDENCE STRUCTURAL VARIANTS ***\n")
 if len(vars['novelsv']) > 0:
-    print("\t".join(('TYPE','CHR1','POS1','CHR2','POS2','LENGTH','BANDS','KNOWN_GENES','TYPE','HGVS-LIKE','ISCN-LIKE','TOTAL_GENES','FILTERS','CONTIG_HITS','ID','ABUNDANCE','PR_READS','SR_READS','CONTIG')))
+    print("\t".join(('TYPE','CHR1','POS1','CHR2','POS2','LENGTH','BANDS','KNOWN_GENES','HGVS-LIKE','ISCN-LIKE','TOTAL_GENES','FILTERS','CONTIG_HITS','ID','ABUNDANCE','PR_READS','SR_READS','CONTIG')))
     for r in vars['novelsv']:
         print("\t".join(r))
     print()

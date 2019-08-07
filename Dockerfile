@@ -326,6 +326,7 @@ COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 
 COPY chromoseq_genes.bed /opt/files/chromoseq_genes.bed
 COPY hg38.cytoBandIdeo.bed.gz /opt/files/hg38.cytoBandIdeo.bed.gz
+COPY hg38.cytoBandIdeo.bed.gz.tbi /opt/files/hg38.cytoBandIdeo.bed.gz.tbi
 COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
 COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
 
