@@ -14,7 +14,9 @@ my $slop = 200;
 my $masklevel = 0.8;
 my $PR = 2;
 my $SR = 2;
-
+my $delcovratio = 0.7;
+my $dupcovratio = 1.3;
+    
 my $minMQ = 0;
 my $fracIdent = 0.95;
 
@@ -187,7 +189,7 @@ while(<BT>){
     $orientation = 'opposite' if ($F[14] =~ /^[ACTGactg]+\]|\[[ACTGactg]+$/);
 
     # store name if right orientation
-    if (($orientation eq 'same' && $F[$#F] eq $F[$#F-1]) or ($orientation eq 'opposite' && $F[$#F] ne $F[$#F-1])){
+    if ($F[$#F] eq '.' or ($orientation eq 'same' && $F[$#F] eq $F[$#F-1]) or ($orientation eq 'opposite' && $F[$#F] ne $F[$#F-1])){
 	$knowntrans{$F[12]} = $F[$#F-3];
 	$knowntrans{$F[15]} = $F[$#F-3];
     }
@@ -210,6 +212,7 @@ while(<VCF>){
 	} while(/^##FILTER/);
 	print O '##FILTER=<ID=LowReads,Description="Failed minimum number of PR or SR reads">',"\n";
 	print O '##FILTER=<ID=FailedContig,Description="Mapping of contig failed to reproduce breakends">',"\n";
+	print O '##FILTER=<ID=FailedCov,Description="Coverage of DEL/DUP does not support an SV call">',"\n";
 	next;
     } elsif (/^#/){
 	print O;
@@ -220,12 +223,24 @@ while(<VCF>){
     chomp;
     my @F = split("\t",$_);
 
+    my @fmtk = split(":",$F[8]);
+    my @fmtv = split(":",$F[9]);
+
+    my %fmt = ();
+    map { $fmt{$fmtk[$_]} = $fmtv[$_]; $fmt{$fmtk[$_]} = [ split(",",$fmt{$fmtk[$_]}) ] if $fmt{$fmtk[$_]}=~/,/; } 0..$#fmtk;
+
+    $F[7] =~ /SVTYPE=([^;]+)/;
+    my $svtype = $1;
+    
     # add hotspot tag, if exists
     $F[7] .= ";KNOWNSV=" . $knowntrans{$F[2]} if (defined($knowntrans{$F[2]}));	           
     
     # add low reads filter if PR and SR reads are low
-    if ($F[8] !~ /PR/ or $F[8] !~ /SR/ or ($F[9] =~ /(\d+),(\d+):(\d+),(\d+)/ and ($2 < $PR or $4 < $SR))){
+    if (!defined($fmt{PR}) or !defined($fmt{SR}) or $fmt{PR}->[1] < $PR or $fmt{SR}->[1] < $SR){
 	$F[6] = "LowReads";
+	
+    } elsif (defined($fmt{DHFFC}) and defined($fmt{DHBFC}) and ($svtype =~ /DEL/ and $fmt{DHFFC} > $delcovratio) or ($svtype =~ /DUP/ and $fmt{DHBFC} < $dupcovratio)){ #(SVTYPE = "DEL" & FMT/DHFFC[0] < 0.7) | (SVTYPE = "DUP" & FMT/DHBFC[0] > 1.3)'
+	$F[6] = "FailedCov";
 	
 	# add no contig filter if no contig/imprecise breakends
     } elsif ($F[7] !~ /CONTIG=/ or !defined($hits{$F[2]})){

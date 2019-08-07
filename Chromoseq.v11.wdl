@@ -275,8 +275,9 @@ task run_manta {
     /usr/local/src/manta/bin/configManta.py --config=${Config} --tumorBam=${Bam} --referenceFasta=${Reference} \
     --runDir=manta --callRegions=${ReferenceBED} --outputContig && \
     ./manta/runWorkflow.py -m local -q research-hpc -j 4 -g 32 && \
-    mv ./manta/results/variants/tumorSV.vcf.gz ${Name}.tumorSV.vcf.gz && \
-    mv ./manta/results/variants/tumorSV.vcf.gz.tbi ${Name}.tumorSV.vcf.gz.tbi
+    zcat ./manta/results/variants/tumorSV.vcf.gz | /bin/sed 's/DUP:TANDEM/DUP/g' > fixed.vcf && \
+    /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/duphold_static -v fixed.vcf -b ${Bam} -f ${Reference} -t 4 -o ${Name}.tumorSV.vcf && \
+    bgzip ${Name}.tumorSV.vcf && /usr/bin/tabix ${Name}.tumorSV.vcf.gz
   >>>
   runtime {
     docker_image: docker
@@ -474,7 +475,7 @@ task combine_variants {
     /opt/conda/envs/python2/bin/bcftools merge --force-samples -O z ${sep=" " VCFs} | \
     /opt/conda/envs/python2/bin/bcftools norm -f ${refFasta} > ${tmp}/combined.vcf && \
     /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${tmp}/combined.vcf ${Bam} ${Name} | \
-    bgzip -c > ${Name}.combined_tagged.vcf.gz && tabix -p vcf ${Name}.combined_tagged.vcf.gz
+    bgzip -c > ${Name}.combined_tagged.vcf.gz && /usr/bin/tabix -p vcf ${Name}.combined_tagged.vcf.gz
   }
   runtime {
     docker_image: docker
@@ -546,8 +547,8 @@ task annotate_svs {
     /opt/conda/envs/python2/bin/svtools afreq filtered.vcf | \
     /opt/conda/envs/python2/bin/svtools vcftobedpe -i stdin | \
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVAnnot} | \
-    /opt/conda/envs/python2/bin/svtools bedpetovcf | /opt/conda/envs/python2/bin/svtools vcfsort | bgzip -c > filtered.tagged.vcf.gz && \
-    /opt/htslib/bin/tabix -p vcf filtered.tagged.vcf.gz && \
+    /opt/conda/envs/python2/bin/svtools bedpetovcf | \
+    /usr/local/bin/bedtools sort -header -g ${refFastaIndex} -i stdin | bgzip -c > filtered.tagged.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools reheader -s name.txt filtered.tagged.vcf.gz > filtered.tagged.reheader.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf filtered.tagged.reheader.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools concat -a cnv.vcf.gz filtered.tagged.reheader.vcf.gz | \
