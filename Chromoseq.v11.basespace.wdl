@@ -5,11 +5,11 @@ workflow ChromoSeq {
   String Name = "TEST"
   String OutputDir = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/new_annotations/test"
   
-  String Translocations = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/hg38_files/chromoseq_translocations.bedpe"
-  String GenesBed = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/hg38_files/chromoseq_genes_myeloseq.bed"
+  String Translocations = "/opt/files/chromoseq_translocations.bedpe"
+  String GenesBed = "/opt/files/chromoseq_genes.bed"
   
-  String Cytobands = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/hg38_files/hg38.cytoBandIdeo.bed.gz"
-  String SVDB = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/hg38_files/chromoseq_sv_filter.bedpe.gz"
+  String Cytobands = "/opt/files/hg38.cytoBandIdeo.bed.gz"
+  String SVDB = "/opt/files/chromoseq_sv_filter.bedpe.gz"
   
   String MantaConfig = "/opt/files/configManta.hg38.py.ini"
   
