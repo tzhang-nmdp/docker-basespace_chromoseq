@@ -185,7 +185,7 @@ for variant in svvcf:
     if variant.FILTER is not None:
         filter = variant.FILTER
 
-    if variant.INFO.get('KNOWNSV') is not None or (filter is 'PASS' and variant.INFO.get('BLACKLIST_VarID') is None):
+    if variant.INFO.get('KNOWNSV') is not None or (filter is 'PASS' and (variant.INFO.get('BLACKLIST_AF') == 0 or variant.INFO.get('BLACKLIST_AF') is None)):
         if variant.INFO.get('CN') is None or (variant.INFO.get('CN') is not None and variant.INFO.get('CNBINS') >= mincnbins):
             passedvars[variant.ID] = variant
 
@@ -255,11 +255,17 @@ for v in passedvars.items():
         psyntax = '.'
         if vartype == 'DEL':
             csyntax = chr1 + ":g." + str(pos1) + "_" + str(pos2) + "del"
-            psyntax = "del(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
+            if bands[0].find('p') > -1 and bands[-1].find('q') > -1: # if the CNA spans the centromere then the whole chromosome is lost/gained
+                psyntax = "-" + chr1.replace('chr','')
+            else:
+                psyntax = "del(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
             
         elif vartype == 'DUP':
             csyntax = chr1 + ":g." + str(pos1) + "_" + str(pos2) + "gain"
-            psyntax = "gain(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
+            if bands[0].find('p') > -1 and bands[-1].find('q') > -1:
+                psyntax = "+" + chr1.replace('chr','')
+            else:
+                psyntax = "gain(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
             
         # abundance
         abundance = 0.0
@@ -363,7 +369,7 @@ for v in passedvars.items():
             
         csyntax = '';
         psyntax = '';
-        if chr1.replace('chr','') < chr2.replace('chr',''): # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
+        if (chr1 != 'chrX' and chr2 != 'chrX' and chr1 != 'chrY' and chr2 != 'chrY' and int(chr1.replace('chr','')) < int(chr2.replace('chr',''))) or chr1 == 'chrX' or chr1 == 'chrY': # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
             csyntax = chr1 + ":g." + str(pos1) + "(+)::" + chr2 + ":g." + str(pos2) + "(" + strand + ")"
             psyntax = 't(' + chr1.replace('chr','') + ';' + chr2.replace('chr','') + ')(' + bands1[0] + ';' + bands2[0] + ')'
         else:

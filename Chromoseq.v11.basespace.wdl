@@ -591,7 +591,7 @@ task make_report {
   command <<<
     /opt/conda/bin/python /usr/local/bin/make_report.py ${Name} ${GeneVCF} ${SVVCF} ${KnownGenes} > "${Name}.chromoseq.txt" && \
     awk -v F=${default=95 MinFracGene20} -v C=${default=20 MinGeneCov} 'BEGIN { printf("\n*** Gene Coverage Metrics: Exons with <%d%% at 20x or <%dx mean coverage ***\n",F,C) } NR==1 || $10<F || $13<C { print $0; } END { printf("\n"); }' ${GeneQC} >> "${Name}.chromoseq.txt" && \
-    awk -v F=${default=95 MinFracRegion10} -v C=${default=10 MinRegionCov} 'BEGIN { printf("\n***SV Region Coverage Metrics: Genes with <%d%% at 10x or <%dx mean coverage ***\n",F,C) } NR==1 || $9<F || $13<C { print $0; } END { printf("\n"); }' ${SVQC} >> "${Name}.chromoseq.txt"
+    awk -v F=${default=95 MinFracRegion10} -v C=${default=10 MinRegionCov} 'BEGIN { printf("\n*** SV Region Coverage Metrics: Genes with <%d%% at 10x or <%dx mean coverage ***\n",F,C) } NR==1 || $9<F || $13<C { print $0; } END { printf("\n"); }' ${SVQC} >> "${Name}.chromoseq.txt"
   >>>
   
   runtime {
