@@ -1,9 +1,13 @@
 workflow ChromoSeq {
 
+  # required inputs
+  
   String Cram = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram"
   String CramIndex = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram.crai" 
   String Name = "TEST"
   String OutputDir = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/new_annotations/test"
+
+  # the rest are defaults
   
   String Translocations = "/opt/files/chromoseq_translocations.bedpe"
   String GenesBed = "/opt/files/chromoseq_genes.bed"
@@ -18,6 +22,11 @@ workflow ChromoSeq {
   String ReferenceBED = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.bed.gz"
   String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache/"
 
+  String gcWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig"
+  String mapWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig"
+  String ponRds = "/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds"
+  String centromeres = "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt"  
+  
   String tmp = "/tmp"
   
   Float minVarFreq=0.02
@@ -89,6 +98,10 @@ workflow ChromoSeq {
     refFasta=Reference,
     ReferenceBED=ReferenceBED,
     CountFiles=count_reads.counts_bed,
+    gcWig=gcWig,
+    mapWig=mapWig,
+    ponRds=ponRds,
+    centromeres=centromeres,
     Name=Name,
     jobGroup=JobGroup,
     tmp=tmp,
@@ -328,10 +341,11 @@ task run_ichor {
   String refFasta
   String Name
   String jobGroup
-  String gcWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig"
-  String mapWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig"
-  String ponRds = "/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds"
-  String centromeres = "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt"
+  String genomeStyle = "UCSC"
+  String gcWig
+  String mapWig
+  String ponRds
+  String centromeres
   String? tmp
   String docker
   
@@ -347,7 +361,7 @@ task run_ichor {
     --normalPanel ${ponRds} \
     --includeHOMD False --chrs "c(1:22, \"X\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle UCSC --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     mv ${Name}/*.pdf .
   >>>
   
@@ -504,11 +518,11 @@ task annotate_variants {
     set -eo pipefail && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
     --format vcf --vcf --fasta ${refFasta} --hgvs --symbol --term SO --per_gene -o ${Name}.annotated.vcf \
-    -i ${Vcf} --custom ${Cytobands},cytobands,bed --offline --cache --af_gnomad --dir ${Vepcache} && \
+    -i ${Vcf} --custom ${Cytobands},cytobands,bed --offline --cache --max_af --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf -o ${Name}.annotated_filtered.vcf \
-    --filter "(gnomAD_AF < 0.001 and gnomAD_AFR_AF < 0.001 and gnomAD_SAS_AF < 0.001 and gnomAD_EAS_AF < 0.001 and gnomAD_NFE_AF < 0.001 and gnomAD_AMR_AF < 0.001 and gnomAD_OTH_AF < 0.001 and gnomAD_FIN_AF < 0.001) or not gnomAD_AF" && \
+    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }

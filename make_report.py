@@ -155,7 +155,7 @@ for variant in genevcf:
     if genes[gene]['HGVSp'] is not None and genes[gene]['HGVSp'] is not '':
         psyntax = genes[gene]['HGVSp'].split(":")[1]
     
-    pmaf = genes[gene]['gnomAD_AF'] # check for exac_AF too. This fails on b37 cases
+    pmaf = genes[gene]['MAX_AF']
     if pmaf is None or pmaf == '':
         pmaf = 'NA'
     else:
@@ -369,7 +369,7 @@ for v in passedvars.items():
             
         csyntax = '';
         psyntax = '';
-        if (chr1 != 'chrX' and chr2 != 'chrX' and chr1 != 'chrY' and chr2 != 'chrY' and int(chr1.replace('chr','')) < int(chr2.replace('chr',''))) or chr1 == 'chrX' or chr1 == 'chrY': # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
+        if (chr1.find('X') == -1 and chr2.find('X') == -1 and chr1.find('Y') == -1 and chr2.find('Y') == -1 and int(chr1.replace('chr','')) < int(chr2.replace('chr',''))) or chr1.find('X') > -1 or chr1.find('Y') > -1: # this isnt working. Want to list lower chromosome first in these strings. If X is involved, then X first.
             csyntax = chr1 + ":g." + str(pos1) + "(+)::" + chr2 + ":g." + str(pos2) + "(" + strand + ")"
             psyntax = 't(' + chr1.replace('chr','') + ';' + chr2.replace('chr','') + ')(' + bands1[0] + ';' + bands2[0] + ')'
         else:
