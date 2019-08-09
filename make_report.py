@@ -185,9 +185,10 @@ for variant in svvcf:
     if variant.FILTER is not None:
         filter = variant.FILTER
 
+    # the only filtering done in this script--return only known or novel SVs
     if variant.INFO.get('KNOWNSV') is not None or (filter is 'PASS' and (variant.INFO.get('BLACKLIST_AF') == 0 or variant.INFO.get('BLACKLIST_AF') is None)):
-        if variant.INFO.get('CN') is None or (variant.INFO.get('CN') is not None and variant.INFO.get('CNBINS') >= mincnbins):
-            passedvars[variant.ID] = variant
+#        if variant.INFO.get('CN') is None or (variant.INFO.get('CN') is not None and variant.INFO.get('CNBINS') >= mincnbins):
+        passedvars[variant.ID] = variant
 
 # done with first pass
 
@@ -257,6 +258,11 @@ for v in passedvars.items():
             csyntax = chr1 + ":g." + str(pos1) + "_" + str(pos2) + "del"
             if bands[0].find('p') > -1 and bands[-1].find('q') > -1: # if the CNA spans the centromere then the whole chromosome is lost/gained
                 psyntax = "-" + chr1.replace('chr','')
+                
+            elif bands[0].find('p') > -1:
+                bands.reverse()
+                psyntax = "del(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
+                
             else:
                 psyntax = "del(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
             
@@ -264,6 +270,11 @@ for v in passedvars.items():
             csyntax = chr1 + ":g." + str(pos1) + "_" + str(pos2) + "gain"
             if bands[0].find('p') > -1 and bands[-1].find('q') > -1:
                 psyntax = "+" + chr1.replace('chr','')
+                
+            elif bands[0].find('p') > -1:
+                bands.reverse()
+                psyntax = "del(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
+                
             else:
                 psyntax = "gain(" + chr1.replace('chr','') + ")(" + bands[0] + bands[-1] + ")"
             
@@ -344,11 +355,13 @@ for v in passedvars.items():
         abundance = 0.0
         pr = (0,0)
         sr = (0,0)            
-        if variant.format("SR") is not None and variant.format("PR")[0] is not None:
+        if variant.format("SR") is not None:
             sr = variant.format("SR")[0]
+            
+        if variant.format("PR")[0] is not None:                
             pr =  variant.format("PR")[0]
 
-            abundance = (sr[1] + pr[1]) / (pr[0] + pr[1] + sr[0] + sr[1]) * 100
+        abundance = (sr[1] + pr[1]) / (pr[0] + pr[1] + sr[0] + sr[1]) * 100
 
         numhits = '.'
         if (variant.INFO.get('CONTIGHITS') is not None):
