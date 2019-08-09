@@ -127,7 +127,7 @@ for variant in genevcf:
     genes = get_csq_entries_bygene(transcripts)
 
     vartype = ''
-    if len(variant.REF) == len(variant.ALT):
+    if len(variant.REF) == len(variant.ALT[0]):
         vartype = 'SNV'
     else:
         vartype = 'INDEL'
