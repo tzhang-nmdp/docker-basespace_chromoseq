@@ -13,6 +13,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends locales && \
 
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
     build-essential \
+    cmake \
+    python-dev \
+    git \
+    wget \
+    autoconf \
+    zlib1g-dev \
+    fort77 \
+    liblzma-dev  \
+    libblas-dev \
+    gfortran \
+    gcc-multilib \
+    aptitude \
+    libreadline-dev \
+    libpcre3 \
+    libpcre3-dev \
     bzip2 \
     curl \
     default-jdk \
@@ -21,33 +36,22 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     git \
     less \
     libcurl4-openssl-dev \
-    libpng-dev \
     libssl-dev \
     libxml2-dev \
     make \
     ncurses-dev \
-    nodejs \
     pkg-config \
     python \
     unzip \
-    wget \
     zip \
     libbz2-dev \
     ca-certificates \
     file \
-    fonts-texgyre \
     g++ \
-    gfortran \
-    gsfonts \
     libbz2-1.0 \
     libcurl3 \
     libicu55 \
-    libjpeg-turbo8 \
     libopenblas-dev \
-    libpangocairo-1.0-0 \
-    libpcre3 \
-    libpng12-0 \
-    libtiff5 \
     liblzma5 \
     locales \
     zlib1g \
@@ -55,24 +59,18 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
     libcairo2-dev \
     libcurl4-openssl-dev \
     libpango1.0-dev \
-    libjpeg-dev \
     libicu-dev \
-    libpcre3-dev \
-    libpng-dev \
     libreadline-dev \
-    libtiff5-dev \
     liblzma-dev \
-    libx11-dev \
     libxt-dev \
     perl \
-    x11proto-core-dev \
-    xauth \
-    xfonts-base \
     xvfb \
     zlib1g-dev \
-    bc \
     libnss-sss
 
+RUN apt-get update && \
+    apt-get install -y 
+		       
 
 ##############
 #HTSlib 1.9#
@@ -191,7 +189,7 @@ RUN cd /tmp && git clone https://github.com/pysam-developers/pysam.git && \
 RUN conda create --quiet --yes -p $CONDA_DIR/envs/python2 python=2.7 'pip' && \
     conda clean -tipsy && \
     /bin/bash -c "source activate python2 && \
-    conda install -c bioconda svtools && \
+    conda install -c anaconda svtools && \
     source deactivate"
 
 #
@@ -204,30 +202,9 @@ RUN wget https://github.com/Illumina/manta/releases/download/v${manta_version}/m
     mv manta-${manta_version}.centos6_x86_64 /usr/local/src/manta
 
 #
-# install hmmcopy and ichor
+# install varscan
 # 
-RUN apt-get update && \
-    apt-get install -y build-essential \
-    	    	       cmake \
-		       python-dev \
-    		       python-pip \
-                       git \
-                       wget \
-                       autoconf \
-                       zlib1g-dev \
-  		       fort77 \
-		       liblzma-dev  \
-		       libblas-dev \
-		       gfortran \
-		       gcc-multilib \
-		       gobjc++ \
-		       aptitude \
-		       libreadline-dev \
-		       python-dev \
-		       libpcre3 \
-		       libpcre3-dev \
-                       default-jdk
-		       
+
 ENV VARSCAN_INSTALL_DIR=/opt/varscan
 
 WORKDIR $VARSCAN_INSTALL_DIR
@@ -249,55 +226,27 @@ WORKDIR /
 RUN ln -s /opt/pindel-0.2.5b8/pindel /usr/local/bin/pindel && \
     ln -s /opt/pindel-0.2.5b8/pindel2vcf /usr/local/bin/pindel2vcf
 
-
-#
-# GATK
-#
-
-#GATK 3.6#
-ENV maven_package_name apache-maven-3.3.9
-ENV gatk_dir_name gatk-protected
-ENV gatk_version 3.6
-RUN cd /tmp/ && wget -q http://mirror.nohup.it/apache/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.zip
-
-# LSF: Comment out the oracle.jrockit.jfr.StringConstantPool.
-RUN cd /tmp/ \
-    && git clone --recursive https://github.com/broadgsa/gatk-protected.git \
-    && cd /tmp/gatk-protected && git checkout tags/${gatk_version} \
-    && sed -i 's/^import oracle.jrockit.jfr.StringConstantPool;/\/\/import oracle.jrockit.jfr.StringConstantPool;/' ./public/gatk-tools-public/src/main/java/org/broadinstitute/gatk/tools/walkers/varianteval/VariantEval.java \
-    && mv /tmp/gatk-protected /opt/${gatk_dir_name}-${gatk_version}
-RUN cd /opt/ && unzip /tmp/${maven_package_name}-bin.zip \
-    && rm -rf /tmp/${maven_package_name}-bin.zip LICENSE NOTICE README.txt \
-    && cd /opt/ \
-    && cd /opt/${gatk_dir_name}-${gatk_version} && /opt/${maven_package_name}/bin/mvn verify -P\!queue \
-    && mv /opt/${gatk_dir_name}-${gatk_version}/protected/gatk-package-distribution/target/gatk-package-distribution-${gatk_version}.jar /opt/GenomeAnalysisTK.jar \
-    && rm -rf /opt/${gatk_dir_name}-${gatk_version} /opt/${maven_package_name}
-
-
 ##################
-# blat and ucsc utilities #
-
-WORKDIR /usr/local/bin/
-RUN wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/blat/blat && \
-    chmod a+x blat
+# ucsc utilities #
 
 RUN mkdir -p /tmp/ucsc && \
     cd /tmp/ucsc && \
     wget http://hgdownload.soe.ucsc.edu/admin/exe/linux.x86_64/bedGraphToBigWig && \
     chmod ugo+x * && \
-    mv * /usr/bin/
+    mv * /usr/local/bin/
 
 ############
 # ichorCNA #
 ############
 
+WORKDIR /usr/local/bin
 RUN git clone https://github.com/broadinstitute/ichorCNA.git
 RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb','GenomicRanges'))"
 RUN R CMD INSTALL ichorCNA
 
 
 #
-#
+# Minimap
 #
 
 RUN cd /opt/ && git clone https://github.com/lh3/minimap2 && \
@@ -362,53 +311,29 @@ RUN cd / && \
 
 RUN mkdir /opt/files/
 
-COPY add_annotations_to_table_helper.py /usr/local/bin/add_annotations_to_table_helper.py
-COPY docm_and_coding_indel_selection.pl /usr/local/bin/docm_and_coding_indel_selection.pl
-COPY runIchorCNA.R /usr/local/bin/runIchorCNA.R
 COPY addReadCountsToVcfCRAM.py /usr/local/bin/addReadCountsToVcfCRAM.py
+COPY duphold_static /usr/local/bin/duphold_static
+COPY FilterManta.pl /usr/local/bin/FilterManta.pl
+COPY ichorToVCF.pl /usr/local/bin/ichorToVCF.pl
+COPY make_report.py /usr/local/bin/make_report.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
-COPY ChromoSeq.hg38.bed /opt/files/ChromoSeq.hg38.bed
-COPY GeneRegions.bed /opt/files/GeneRegions.bed
-COPY ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe /opt/files/ChromoSeq.translocations.fixed.v3.sorted.hg38.bedpe
-COPY ChromoSeqReporter.hg38.pl /usr/local/bin/ChromoSeqReporter.hg38.pl
-COPY BlatContigs.pl /usr/local/bin/BlatContigs.pl
-COPY pslScore.pl /usr/local/bin/pslScore.pl
-COPY hg38.blacklist.merged.bed /opt/files/hg38.blacklist.merged.bed
-COPY B38.callset.public.bedpe.gz /opt/files/B38.callset.public.bedpe.gz
-COPY all.stranded.filtered.merged.bedpe.gz /opt/files/all.stranded.filtered.merged.bedpe.gz
-COPY all.stranded.filtered.merged.bedpe.gz.tbi /opt/files/all.stranded.filtered.merged.bedpe.gz.tbi
-COPY GeneCoverageRegions.bed /opt/files/GeneCoverageRegions.bed
-COPY ChromoSeq.translocations.qc.bed /opt/files/ChromoSeq.translocations.qc.bed 
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
-COPY all_sequences.dict /opt/files/all_sequences.dict
+
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
 COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
 COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
+
+COPY chromoseq_genes.bed /opt/files/chromoseq_genes.bed
+COPY hg38.cytoBandIdeo.bed.gz /opt/files/hg38.cytoBandIdeo.bed.gz
+COPY hg38.cytoBandIdeo.bed.gz.tbi /opt/files/hg38.cytoBandIdeo.bed.gz.tbi
+COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
+COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
+
 COPY driver.py /opt/files/driver.py
-COPY Chromoseq_basespace.v10.wdl /opt/files/Chromoseq_basespace.v10.wdl
-
-
-#RUN cd /opt/ && \
-#    git config --global http.sslVerify false && \
-#    git clone --recursive https://github.com/shahcompbio/hmmcopy_utils.git && \
-#    cd /opt/hmmcopy_utils && \
-#    cmake . && \
-#    make && \
-#    cp bin/* /usr/local/bin/
-
-#RUN Rscript -e "source('https://bioconductor.org/biocLite.R'); biocLite('HMMcopy'); biocLite('GenomeInfoDb'); install.packages(c('devtools','optparse'))"
-#RUN Rscript --default-packages=devtools -e "install_github('broadinstitute/ichorCNA')"
-#RUN cd /opt/ && wget https://github.com/broadinstitute/ichorCNA/archive/master.zip && \
-#       unzip master.zip && mv ichorCNA-master/scripts/*.R /usr/local/bin/ && rm -Rf master.zip ichorCNA-master
-
-#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
-#RUN Rscript -e "install.packages('devtools'); library('devtools'); install_github('broadinstitute/ichorCNA')"
-
-#RUN git clone https://github.com/broadinstitute/ichorCNA.git
-#RUN Rscript -e "install.packages(c('plyr', 'optparse')); BiocManager::install(c('HMMcopy', 'GenomicRanges', 'GenomeInfoDb'))"
-#RUN R CMD INSTALL ichorCNA
+COPY Chromoseq.v11.basespace.wdl /opt/files/Chromoseq.v11.basespace.wdl
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
 
+RUN rm -f /usr/local/lib/R/site-library/ichorCNA/extdata/*.rds /usr/local/lib/R/site-library/ichorCNA/extdata/MBC* /usr/local/lib/R/site-library/ichorCNA/extdata/*10kb* /usr/local/lib/R/site-library/ichorCNA/extdata/*50kb* /usr/local/lib/R/site-library/ichorCNA/extdata/*1000kb*
