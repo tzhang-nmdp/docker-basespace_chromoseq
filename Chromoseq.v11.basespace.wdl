@@ -2,10 +2,10 @@ workflow ChromoSeq {
 
   # required inputs
   
-  String Cram = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram"
-  String CramIndex = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram.crai" 
-  String Name = "TEST"
-  String OutputDir = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/new_annotations/test"
+  String Cram 
+  String CramIndex  
+  String Name  
+  String OutputDir 
 
   # the rest are defaults
   
@@ -17,10 +17,10 @@ workflow ChromoSeq {
   
   String MantaConfig = "/opt/files/configManta.hg38.py.ini"
   
-  String Reference = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa"
-  String ReferenceIndex = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.fai"
-  String ReferenceBED = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.bed.gz"
-  String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache/"
+  String Reference = "/opt/files/all_sequences.fa"
+  String ReferenceIndex = "/opt/files/all_sequences.fa.fai"
+  String ReferenceBED = "/opt/files/all_sequences.fa.bed.gz"
+  String VEP = "/opt/files"
 
   String gcWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig"
   String mapWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig"
@@ -31,17 +31,11 @@ workflow ChromoSeq {
   
   Float minVarFreq=0.02
   
-  String JobGroup = "/dspencer/chromoseq"  
-
-  String chromoseq_docker = "dhspence/docker-basespace_chromoseq:v5"
-  
   call prepare_bed {
     input: Bedpe=Translocations,
     Bed=GenesBed,
     Reference=ReferenceBED,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
     
   call cov_qc as gene_qc {
@@ -50,9 +44,7 @@ workflow ChromoSeq {
     Name=Name,
     Bed=GenesBed,
     refFasta=Reference,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
 
   call cov_qc as sv_qc {
@@ -61,9 +53,7 @@ workflow ChromoSeq {
     Name=Name,
     Bed=prepare_bed.svbed,
     refFasta=Reference,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call run_manta {
@@ -73,9 +63,7 @@ workflow ChromoSeq {
     Reference=Reference,
     ReferenceBED=ReferenceBED,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
     
   scatter (chr in prepare_bed.chroms){
@@ -86,9 +74,7 @@ workflow ChromoSeq {
       refFasta=Reference,
       refIndex=ReferenceIndex,
       Chrom=chr,
-      jobGroup=JobGroup,
-      tmp=tmp,
-      docker=chromoseq_docker
+      tmp=tmp
     }
   }
   
@@ -103,9 +89,7 @@ workflow ChromoSeq {
     ponRds=ponRds,
     centromeres=centromeres,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call run_varscan {
@@ -115,9 +99,7 @@ workflow ChromoSeq {
     MinFreq=minVarFreq,
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call run_pindel_region as run_pindel_flt3itd {
@@ -126,9 +108,7 @@ workflow ChromoSeq {
     Reg='chr13:28033987-28034316',
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
     
   call combine_variants {
@@ -139,9 +119,7 @@ workflow ChromoSeq {
     BamIndex=CramIndex,
     refFasta=Reference,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call annotate_variants {
@@ -150,9 +128,7 @@ workflow ChromoSeq {
     Vepcache=VEP,
     Cytobands=Cytobands,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call annotate_svs {
@@ -165,9 +141,7 @@ workflow ChromoSeq {
     Translocations=Translocations,
     Cytobands=Cytobands,
     Name=Name,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
+    tmp=tmp
   }
   
   call make_report {
@@ -178,8 +152,6 @@ workflow ChromoSeq {
     SVQC=sv_qc.qc_out,
     CovQC=gene_qc.global_dist,
     Name=Name,
-    jobGroup=JobGroup,
-    docker=chromoseq_docker,
     tmp=tmp
   }
   
@@ -204,9 +176,7 @@ workflow ChromoSeq {
     annotate_variants.annotated_filtered_vcf,
     make_report.report],  #make_bw.bigwig_file,
 #    make_igv.igv_xml],
-    OutputDir=OutputDir,
-    jobGroup=JobGroup,
-    docker=chromoseq_docker
+    OutputDir=OutputDir
   }
   
 }
@@ -215,22 +185,13 @@ task prepare_bed {
   String Bedpe
   String Bed
   String Reference
-  String jobGroup
   String? tmp
-  String docker
   
   command <<<
     awk -v OFS="\t" '{ split($7,a,"_"); print $1,$2,$3,a[1],".",$9; print $4,$5,$6,a[2],".",$10; }' ${Bedpe} | sort -u -k 1,1V -k 2,2n > sv.bed
     cat sv.bed ${Bed} | cut -f 4 > genes.txt
     gunzip -c ${Reference} | cut -f 1 > chroms.txt
   >>>
-
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "4 G"
-    job_group: jobGroup
-  }
 
   output {
     File svbed = "sv.bed"
@@ -245,9 +206,7 @@ task cov_qc {
   String Bed
   String Name
   String refFasta
-  String jobGroup
   String tmp
-  String docker
   
   command <<<
     set -eo pipefail && \
@@ -256,13 +215,6 @@ task cov_qc {
     awk -v OFS="\t" '{ if (NR==1){ print $0,"%"$5,"%"$6,"%"$7,"%"$8,"MeanCov"; } else { print $1,$2,$3,$4,$5,$6,$7,$8,sprintf("%.2f\t%.2f\t%.2f\t%.2f",$5/$NF*100,$6/$NF*100,$7/$NF*100,$8/$NF*100),$(NF-1); } }' > "${Name}."$(basename ${Bed} .bed)".covqc.txt" && \
     mv "${Name}.mosdepth.region.dist.txt" "${Name}.mosdepth."$(basename ${Bed} .bed)".region.dist.txt"
   >>>
-  
-  runtime {
-    docker_image: docker
-    cpu: "4"
-    memory: "32 G"
-    job_group: jobGroup
-  }
   
   output {
     File qc_out = glob("*.covqc.txt")[0]
@@ -279,9 +231,7 @@ task run_manta {
   String Name
   String Reference
   String ReferenceBED
-  String jobGroup
   String tmp
-  String docker
   
   command <<<
     set -eo pipefail && \
@@ -292,12 +242,6 @@ task run_manta {
     /usr/local/bin/duphold_static -v fixed.vcf -b ${Bam} -f ${Reference} -t 4 -o ${Name}.tumorSV.vcf && \
     bgzip ${Name}.tumorSV.vcf && /usr/bin/tabix ${Name}.tumorSV.vcf.gz
   >>>
-  runtime {
-    docker_image: docker
-    cpu: "4"
-    memory: "32 G"
-    job_group: jobGroup
-  }
   output {
     File vcf = "${Name}.tumorSV.vcf.gz"
     File index = "${Name}.tumorSV.vcf.gz.tbi"
@@ -309,26 +253,20 @@ task count_reads {
   String BamIndex
   String ReferenceBED
   String Chrom
-  String jobGroup
   String refFasta
   String refIndex
   String tmp
-  String docker
   
   command {
     set -eo pipefail && \
-    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/windows.bed && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/windows.bed > counts.bed
+    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/i${Chrom}.windows.bed) && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "8 G"
-    job_group: jobGroup
-  }
   output {
-    File counts_bed = "counts.bed"
+    File counts_bed = "${Chrom}.counts.bed"
   }
 }
 
@@ -340,14 +278,12 @@ task run_ichor {
   Array[String] CountFiles
   String refFasta
   String Name
-  String jobGroup
   String genomeStyle = "UCSC"
   String gcWig
   String mapWig
   String ponRds
   String centromeres
   String? tmp
-  String docker
   
   command <<<
     set -eo pipefail && \
@@ -364,13 +300,6 @@ task run_ichor {
     --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     mv ${Name}/*.pdf .
   >>>
-  
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "16 G"
-    job_group: jobGroup
-  }
   
   output {
     File params = "${Name}.params.txt"
@@ -392,9 +321,7 @@ task run_varscan {
   String CoverageBed
   String refFasta
   String Name
-  String jobGroup
   String? tmp
-  String docker
   
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > ${tmp}/mpileup.out && \
@@ -404,12 +331,6 @@ task run_varscan {
     --min-var-freq ${default="0.02" MinFreq} --output-vcf | bgzip -c > ${Name}.indel.vcf.gz && tabix ${Name}.indel.vcf.gz
   >>>
   
-  runtime {
-    docker_image: docker
-    cpu: "2"
-    memory: "16 G"
-    job_group: jobGroup
-  }
   output {
     File varscan_snv_file = "${Name}.snv.vcf.gz"
     File varscan_indel_file = "${Name}.indel.vcf.gz"
@@ -424,9 +345,7 @@ task run_pindel_region {
   Int? MinReads
   String refFasta
   String Name
-  String jobGroup
   String? tmp
-  String docker
   
   command <<<
     (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta}".gz" ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - ${tmp}/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
@@ -435,12 +354,6 @@ task run_pindel_region {
     /bin/sed 's/END=[0-9]*\;//' ${tmp}/pindel.vcf | bgzip -c > ${Name}.pindel.vcf.gz && tabix ${Name}.pindel.vcf.gz
   >>>
   
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "16 G"
-    job_group: jobGroup
-  }
   output {
     File pindel_vcf_file = "${Name}.pindel.vcf.gz"
   }
@@ -454,9 +367,7 @@ task run_platypus {
   Float? MinFreq
   String Name
   String refFasta
-  String jobGroup
   String? tmp
-  String docker
   
   command <<<
     /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
@@ -464,12 +375,6 @@ task run_platypus {
     /bin/sed 's/VCFv4.3/VCFv4.1/' "${Name}.vcf" > "${Name}.platypus.vcf"     
   >>>
   
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "32 G"
-    job_group: jobGroup
-  }
   output {
     File platypus_vcf_file = "${Name}.platypus.vcf"
   }
@@ -481,21 +386,13 @@ task combine_variants {
   String BamIndex
   String refFasta
   String Name
-  String jobGroup
   String? tmp
-  String docker
   
   command {
     /opt/conda/envs/python2/bin/bcftools merge --force-samples -O z ${sep=" " VCFs} | \
     /opt/conda/envs/python2/bin/bcftools norm -f ${refFasta} > ${tmp}/combined.vcf && \
     /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${tmp}/combined.vcf ${Bam} ${Name} | \
     bgzip -c > ${Name}.combined_tagged.vcf.gz && /usr/bin/tabix -p vcf ${Name}.combined_tagged.vcf.gz
-  }
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "10 G"
-    job_group: jobGroup
   }
   output {
     File combined_vcf_file = "${Name}.combined_tagged.vcf.gz"
@@ -510,9 +407,7 @@ task annotate_variants {
   String Cytobands
   Float? maxAF
   String Name
-  String jobGroup
   String? tmp
-  String docker
   
   command {
     set -eo pipefail && \
@@ -525,12 +420,6 @@ task annotate_variants {
     --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
-  }
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "32 G"
-    job_group: jobGroup
   }
   output {
     File annotated_vcf = "${Name}.annotated.vcf.gz"
@@ -545,12 +434,10 @@ task annotate_svs {
   String refFastaIndex
   String Vepcache
   String Name
-  String jobGroup
   String SVAnnot
   String Translocations
   String Cytobands
   String? tmp
-  String docker
   
   command {
     set -eo pipefail && \
@@ -572,13 +459,6 @@ task annotate_svs {
     /opt/htslib/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz
   }
   
-  runtime {
-    docker_image: docker
-    cpu: "1"
-    memory: "24 G"
-    job_group: jobGroup
-  }
-  
   output {
     File vcf = "${Name}.svs_annotated.vcf.gz"
     File vcf_index = "${Name}.svs_annotated.vcf.gz.tbi"
@@ -594,9 +474,7 @@ task make_report {
   String GeneQC
   String CovQC
   String Name
-  String jobGroup
   String tmp
-  String docker
   Int? MinGeneCov
   Int? MinFracGene20
   Int? MinRegionCov
@@ -608,11 +486,6 @@ task make_report {
     awk -v F=${default=95 MinFracRegion10} -v C=${default=10 MinRegionCov} 'BEGIN { printf("\n*** SV Region Coverage Metrics: Genes with <%d%% at 10x or <%dx mean coverage ***\n",F,C) } NR==1 || $9<F || $13<C { print $0; } END { printf("\n"); }' ${SVQC} >> "${Name}.chromoseq.txt"
   >>>
   
-  runtime {
-    docker_image: docker
-    job_group: jobGroup
-  }
-  
   output {
     File report = "${Name}.chromoseq.txt"
   }
@@ -621,7 +494,6 @@ task make_report {
 
 task make_igv {
   String Name
-  String docker
   
   command {
     cat <<EOF > ${Name}.igv.xml
@@ -639,10 +511,6 @@ task make_igv {
     EOF    
   }
   
-  runtime {
-    docker_image: docker
-  }
-  
   output {
     File igv_xml = "${Name}.igv.xml"
   }  
@@ -651,15 +519,9 @@ task make_igv {
 task remove_files {
   Array[String] files
   String order_by
-  String jobGroup
-  String docker
   
   command {
     /bin/rm ${sep=" " files}
-  }
-  runtime {
-    docker_image: docker
-    job_group: jobGroup
   }
   output {
     String done = stdout()
@@ -669,14 +531,9 @@ task remove_files {
 task gather_files {
   Array[String] OutputFiles
   String OutputDir
-  String jobGroup
-  String docker
   
   command {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
-  }
-  runtime {
-    docker_image: "ubuntu:xenial"
   }
   output {
     String done = stdout()
