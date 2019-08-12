@@ -260,7 +260,7 @@ task count_reads {
   command {
     set -eo pipefail && \
     (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/i${Chrom}.windows.bed) && \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/${Chrom}.windows.bed) && \
     /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
     /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
