@@ -28,6 +28,8 @@ workflow ChromoSeq {
   String centromeres = "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt"  
   
   String tmp = "/tmp"
+
+  String GenomeBuild = "hg38"
   
   Float minVarFreq=0.02
   
@@ -107,6 +109,7 @@ workflow ChromoSeq {
     BamIndex=CramIndex,
     Reg='chr13:28033987-28034316',
     refFasta=Reference,
+    genome=GenomeBuild,
     Name=Name,
     tmp=tmp
   }
@@ -259,14 +262,11 @@ task count_reads {
   
   command {
     set -eo pipefail && \
-    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
-    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/${Chrom}.windows.bed) && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
-    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/${Chrom}.windows.bed > ${Chrom}.counts.bed
+    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/windows.bed && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/windows.bed > counts.bed
   }
 
-  output {
-    File counts_bed = "${Chrom}.counts.bed"
+    File counts_bed = "counts.bed"
   }
 }
 
@@ -346,11 +346,12 @@ task run_pindel_region {
   String refFasta
   String Name
   String? tmp
+  String genome
   
   command <<<
     (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - ${tmp}/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
     /usr/local/bin/pindel -f ${refFasta} -p ${tmp}/in.pindel -c ${Reg} -o ${tmp}/out.pindel && \
-    /usr/local/bin/pindel2vcf -P ${tmp}/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R hg38 -d hg38 -v ${tmp}/pindel.vcf && \
+    /usr/local/bin/pindel2vcf -P ${tmp}/out.pindel -G -r ${refFasta} -e ${default=3 MinReads} -R ${default="hg38" genome} -d ${default="hg38" genome} -v ${tmp}/pindel.vcf && \
     /bin/sed 's/END=[0-9]*\;//' ${tmp}/pindel.vcf | bgzip -c > ${Name}.pindel.vcf.gz && tabix ${Name}.pindel.vcf.gz
   >>>
   

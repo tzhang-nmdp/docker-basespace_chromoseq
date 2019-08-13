@@ -317,7 +317,7 @@ COPY FilterManta.pl /usr/local/bin/FilterManta.pl
 COPY ichorToVCF.pl /usr/local/bin/ichorToVCF.pl
 COPY make_report.py /usr/local/bin/make_report.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
-COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds
+COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
 
 COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
