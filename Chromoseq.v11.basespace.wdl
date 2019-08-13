@@ -24,7 +24,7 @@ workflow ChromoSeq {
 
   String gcWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig"
   String mapWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig"
-  String ponRds = "/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds"
+  String ponRds = "/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds"
   String centromeres = "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt"  
   
   String tmp = "/tmp"
