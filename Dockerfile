@@ -331,7 +331,7 @@ COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
 COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
 
 COPY driver.py /opt/files/driver.py
-COPY Chromoseq.v11.basespace.wdl /opt/files/Chromoseq.v11.basespace.wdl
+COPY Chromoseq.v12.wdl /opt/files/Chromoseq.v12.wdl
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
