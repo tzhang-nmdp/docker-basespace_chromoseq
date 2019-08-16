@@ -63,7 +63,25 @@ wf_inputs_dict = \
     "ChromoSeq.CramIndex": crai_file,
     "ChromoSeq.Name": name,
     "ChromoSeq.OutputDir": output_dir,
-    "ChromoSeq.Reference": ref_file 
+    "ChromoSeq.Reference": ref_file,
+    "ChromoSeq.Translocations": "/opt/files/chromoseq_translocations.bedpe",
+    "ChromoSeq.GenesBed": "/opt/files/chromoseq_genes.bed",
+    "ChromoSeq.Cytobands": "/opt/files/hg38.cytoBandIdeo.bed.gz",
+    "ChromoSeq.SVDB": "/opt/files/chromoseq_sv_filter.bedpe.gz",
+    "ChromoSeq.MantaConfig": "/opt/files/configManta.hg38.py.ini",
+    "ChromoSeq.ReferenceIndex": "/opt/files/all_sequences.fa.fai",
+    "ChromoSeq.ReferenceBED": "/opt/files/all_sequences.fa.bed.gz",
+    "ChromoSeq.VEP": "/opt/files",
+    "ChromoSeq.gcWig": "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig",
+    "ChromoSeq.mapWig": "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig",
+    "ChromoSeq.ponRds": "/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds",
+    "ChromoSeq.centromeres": "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt",
+    "ChromoSeq.genomeStyle": "UCSC",
+    "ChromoSeq.genome": "hg38",
+    "ChromoSeq.tmp": "/tmp",
+    "ChromoSeq.minVarFreq": 0.02,
+    "ChromoSeq.JobGroup": "dummy",
+    "ChromoSeq.chromoseq_docker": "dummy"
 }
 
 with open("/opt/files/inputs.json", "w+") as f:
@@ -99,6 +117,6 @@ with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
 print('\nLaunching cromwell')
-cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v11.basespace.wdl"]
+cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v12.wdl"]
 subprocess.check_call(cromwell_cmd)
 print('\nCromwell complete')
