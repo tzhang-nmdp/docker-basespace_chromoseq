@@ -521,11 +521,11 @@ task annotate_variants {
     set -eo pipefail && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
     --format vcf --vcf --fasta ${refFasta} --hgvs --symbol --term SO --per_gene -o ${Name}.annotated.vcf \
-    -i ${Vcf} --custom ${Cytobands},cytobands,bed --offline --cache --af_gnomad --dir ${Vepcache} && \
+    -i ${Vcf} --custom ${Cytobands},cytobands,bed --offline --cache --max_af --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf -o ${Name}.annotated_filtered.vcf \
-    --filter "(gnomAD_AF < 0.001 and gnomAD_AFR_AF < 0.001 and gnomAD_SAS_AF < 0.001 and gnomAD_EAS_AF < 0.001 and gnomAD_NFE_AF < 0.001 and gnomAD_AMR_AF < 0.001 and gnomAD_OTH_AF < 0.001 and gnomAD_FIN_AF < 0.001) or not gnomAD_AF" && \
+    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }
