@@ -1,41 +1,37 @@
 workflow ChromoSeq {
 
-  # required inputs
+  String Cram
+  String CramIndex 
+  String Name
+  String OutputDir
   
-  String Cram = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram"
-  String CramIndex = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/prospective/Batch10/TWDY-ChrSeq-0044-BM-lib1/TWDY-ChrSeq-0044-BM-lib1.cram.crai" 
-  String Name = "TEST"
-  String OutputDir = "/gscmnt/gc2555/spencer/dhs/projects/chromoseq/new_annotations/test"
+  String Translocations
+  String GenesBed
+  
+  String Cytobands
+  String SVDB
+  
+  String MantaConfig
+  
+  String Reference
+  String ReferenceIndex
+  String ReferenceBED
+  String VEP
 
-  # the rest are defaults
-  
-  String Translocations = "/opt/files/chromoseq_translocations.bedpe"
-  String GenesBed = "/opt/files/chromoseq_genes.bed"
-  
-  String Cytobands = "/opt/files/hg38.cytoBandIdeo.bed.gz"
-  String SVDB = "/opt/files/chromoseq_sv_filter.bedpe.gz"
-  
-  String MantaConfig = "/opt/files/configManta.hg38.py.ini"
-  
-  String Reference = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa"
-  String ReferenceIndex = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.fai"
-  String ReferenceBED = "/gscmnt/gc2555/spencer/refdata/hg38/all_sequences.fa.bed.gz"
-  String VEP = "/gscmnt/gc2709/info/production_reference_GRCh38DH/CLE/IDTExome/VEP_cache/"
+  String gcWig
+  String mapWig
+  String ponRds
+  String centromeres
+  String genomeStyle
+  String genome
 
-  String gcWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/gc_hg38_500kb.wig"
-  String mapWig = "/usr/local/lib/R/site-library/ichorCNA/extdata/map_hg38_500kb.wig"
-  String ponRds = "/gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds" #/opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.rds"
-  String centromeres = "/usr/local/lib/R/site-library/ichorCNA/extdata/GRCh38.GCA_000001405.2_centromere_acen.txt"  
+  String tmp
   
-  String tmp = "/tmp"
+  Float minVarFreq
+  
+  String JobGroup  
 
-  String GenomeBuild = "hg38"
-  
-  Float minVarFreq=0.02
-  
-  String JobGroup = "/dspencer/chromoseq"
-
-  String chromoseq_docker = "mgibio/basespace_chromoseq"
+  String chromoseq_docker
   
   call prepare_bed {
     input: Bedpe=Translocations,
@@ -105,6 +101,7 @@ workflow ChromoSeq {
     ponRds=ponRds,
     centromeres=centromeres,
     Name=Name,
+    genomeStyle = genomeStyle,
     jobGroup=JobGroup,
     tmp=tmp,
     docker=chromoseq_docker
@@ -127,8 +124,8 @@ workflow ChromoSeq {
     BamIndex=CramIndex,
     Reg='chr13:28033987-28034316',
     refFasta=Reference,
-    genome=GenomeBuild,
     Name=Name,
+    genome=genome,
     jobGroup=JobGroup,
     tmp=tmp,
     docker=chromoseq_docker
@@ -272,7 +269,7 @@ task cov_qc {
     File global_dist = "${Name}.mosdepth.global.dist.txt"
     File region_dist = glob("*.region.dist.txt")[0]
   }
-  
+
 }
 
 task run_manta {
@@ -320,8 +317,10 @@ task count_reads {
   
   command {
     set -eo pipefail && \
-    /usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/windows.bed && \
-    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/windows.bed > counts.bed
+    (/usr/local/bin/bedtools makewindows -b ${ReferenceBED} -w 500000 | \
+    awk -v OFS="\t" -v C="${Chrom}" '$1==C && NF==3' > ${tmp}/${Chrom}.windows.bed) && \
+    /usr/local/bin/samtools view -b -f 0x2 -F 0x400 -q 20 -T ${refFasta} ${Bam} ${Chrom} | \
+    /usr/local/bin/intersectBed -sorted -nobuf -c -bed -b stdin -a ${tmp}/${Chrom}.windows.bed > ${Chrom}.counts.bed
   }
 
   runtime {
@@ -331,7 +330,7 @@ task count_reads {
     job_group: jobGroup
   }
   output {
-    File counts_bed = "counts.bed"
+    File counts_bed = "${Chrom}.counts.bed"
   }
 }
 
@@ -343,8 +342,8 @@ task run_ichor {
   Array[String] CountFiles
   String refFasta
   String Name
+  String genomeStyle
   String jobGroup
-  String genomeStyle = "UCSC"
   String gcWig
   String mapWig
   String ponRds
