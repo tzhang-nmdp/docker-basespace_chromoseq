@@ -1,0 +1,1 @@
+bsub -R 'select[mem>8000] rusage[mem=8000]' -q research-hpc -o workflow.out -e workflow.err -a 'docker(mgibio/basespace_chromoseq)' /usr/bin/java -Dconfig.file=cromwell.config -jar /gscmnt/gc2764/cad/jgarza/shared/cromwell-36.jar run -t wdl -i inputs.json docker-basespace_chromoseq/Chromoseq.v12.wdl
