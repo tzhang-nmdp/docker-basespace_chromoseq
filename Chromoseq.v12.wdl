@@ -226,7 +226,7 @@ task prepare_bed {
   >>>
 
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "4 G"
     job_group: jobGroup
@@ -258,7 +258,7 @@ task cov_qc {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -293,7 +293,7 @@ task run_manta {
     bgzip ${Name}.tumorSV.vcf && /usr/bin/tabix ${Name}.tumorSV.vcf.gz
   >>>
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "4"
     memory: "32 G"
     job_group: jobGroup
@@ -324,7 +324,7 @@ task count_reads {
   }
 
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "8 G"
     job_group: jobGroup
@@ -368,7 +368,7 @@ task run_ichor {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -407,7 +407,7 @@ task run_varscan {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "2"
     memory: "16 G"
     job_group: jobGroup
@@ -439,7 +439,7 @@ task run_pindel_region {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "16 G"
     job_group: jobGroup
@@ -468,7 +468,7 @@ task run_platypus {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -495,7 +495,7 @@ task combine_variants {
     bgzip -c > ${Name}.combined_tagged.vcf.gz && /usr/bin/tabix -p vcf ${Name}.combined_tagged.vcf.gz
   }
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "10 G"
     job_group: jobGroup
@@ -530,7 +530,7 @@ task annotate_variants {
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "32 G"
     job_group: jobGroup
@@ -576,7 +576,7 @@ task annotate_svs {
   }
   
   runtime {
-    docker_image: docker
+    docker: docker
     cpu: "1"
     memory: "24 G"
     job_group: jobGroup
@@ -612,7 +612,7 @@ task make_report {
   >>>
   
   runtime {
-    docker_image: docker
+    docker: docker
     job_group: jobGroup
   }
   
@@ -644,7 +644,7 @@ task make_igv {
   }
   
   runtime {
-    docker_image: docker
+    docker: docker
   }
   
   output {
@@ -662,7 +662,7 @@ task remove_files {
     /bin/rm ${sep=" " files}
   }
   runtime {
-    docker_image: docker
+    docker: docker
     job_group: jobGroup
   }
   output {
@@ -680,7 +680,7 @@ task gather_files {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}
   }
   runtime {
-    docker_image: "ubuntu:xenial"
+    docker: "ubuntu:xenial"
   }
   output {
     String done = stdout()
