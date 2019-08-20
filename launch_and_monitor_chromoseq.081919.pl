@@ -18,7 +18,7 @@ my $ref_fasta = 14477433053;
 
 my $debug = "";
 
-my $ProjectName = "full_workflow_test1";
+my $ProjectName = "TestProject";
 my $outdir = "./";
 
 my $dragensession = '';
