@@ -202,8 +202,8 @@ workflow ChromoSeq {
     sv_qc.qc_out,
     sv_qc.region_dist,
     annotate_variants.annotated_filtered_vcf,
-    make_report.report],  #make_bw.bigwig_file,
-#    make_igv.igv_xml],
+    make_report.report,
+    make_report.data_dump],
     OutputDir=OutputDir,
     jobGroup=JobGroup,
     docker=chromoseq_docker
@@ -618,6 +618,7 @@ task make_report {
   
   output {
     File report = "${Name}.chromoseq.txt"
+    File data_dump = "feature_summary.json"
   }
   
 }

@@ -8,6 +8,7 @@ from cyvcf2 import VCF
 import tempfile
 import csv
 import binascii
+import json
 
 def parse_csq_header(vcf_file):
     for header in vcf_file.header_iter():
@@ -452,4 +453,7 @@ if len(vars['novelsv']) > 0:
     print()
 else:
     print("\t"+"NONE DETECTED\n")
+
+with open('feature_summary.json', 'w') as f:
+    json.dump(vars, f)
 
