@@ -81,7 +81,7 @@ wf_inputs_dict = \
     "ChromoSeq.tmp": "/tmp",
     "ChromoSeq.minVarFreq": 0.02,
     "ChromoSeq.JobGroup": "dummy",
-    "ChromoSeq.chromoseq_docker": "dummy"
+    "ChromoSeq.chromoseq_docker": "mgibio/basespace_chromoseq"
 }
 
 with open("/opt/files/inputs.json", "w+") as f:
