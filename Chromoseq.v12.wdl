@@ -525,7 +525,7 @@ task annotate_variants {
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf -o ${Name}.annotated_filtered.vcf \
-    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" && \
+    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) or (SOMATIC and (CLIN_SIG is pathogenic or CLIN_SIG is likely_pathogenic))" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }
