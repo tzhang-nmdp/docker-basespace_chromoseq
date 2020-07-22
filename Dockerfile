@@ -332,6 +332,9 @@ COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
 
 COPY driver.py /opt/files/driver.py
 
+COPY make_report3.py /usr/local/bin/make_report3.py
+COPY addReadCountsToVcfCRAM3.py /usr/local/bin/addReadCountsToVcfCRAM3.py
+
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
 
