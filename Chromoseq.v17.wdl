@@ -6,7 +6,6 @@ workflow ChromoSeq {
   String Gender
   String MappingSummary
   String? CoverageSummary
-  String TumorCounts
   String OutputDir
   
   String Translocations
@@ -92,13 +91,27 @@ workflow ChromoSeq {
     tmp=tmp,
     docker=chromoseq_docker
   }
+
+  scatter (chr in prepare_bed.chroms){
+    call count_reads {
+      input: Bam=Cram,
+      BamIndex=CramIndex,
+      ReferenceBED=ReferenceBED,
+      refFasta=Reference,
+      refIndex=ReferenceIndex,
+      Chrom=chr,
+      jobGroup=JobGroup,
+      tmp=tmp,
+      docker=chromoseq_docker
+    }   
+  }
     
   call run_ichor {
     input: Bam=Cram,
     BamIndex=CramIndex,
     refFasta=Reference,
     ReferenceBED=ReferenceBED,
-    tumorCounts=TumorCounts,
+    CountFiles=count_reads.counts_bed,
     gender=Gender,
     gcWig=gcWig,
     mapWig=mapWig,
@@ -358,7 +371,7 @@ task run_ichor {
   String Bam
   String BamIndex
   String ReferenceBED
-  String tumorCounts
+  Array[String] CountFiles
   String refFasta
   String Name
   String gender
@@ -379,8 +392,9 @@ task run_ichor {
   
   command <<<
     set -eo pipefail && \
-    tail -n +6 ${tumorCounts} | sort -k 1V,1 -k 2n,2 | awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $5; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /gscmnt/gc2555/spencer/dhs/git/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
+    cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \ 
+    awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
+    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig ${gcWig} \
     --mapWig ${mapWig} \
@@ -390,7 +404,7 @@ task run_ichor {
     --sex ${gender} \
     --includeHOMD False --chrs "c(1:22, \"X\", \"Y\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /gscmnt/gc2555/spencer/dhs/git/ichorCNA/ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
     awk -v G=${gender} '$2!~/Y/ || G=="male"' "${Name}.seg.txt" > "${Name}.segs.txt" && \
     mv ${Name}/*.pdf .
   >>>
