@@ -237,7 +237,7 @@ RUN mkdir -p /tmp/ucsc && \
 ############
 
 WORKDIR /usr/local/bin
-RUN git clone https://github.com/broadinstitute/ichorCNA.git
+RUN git clone https://github.com/GavinHaLab/ichorCNA.git
 RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb','GenomicRanges'))"
 RUN R CMD INSTALL ichorCNA
 
