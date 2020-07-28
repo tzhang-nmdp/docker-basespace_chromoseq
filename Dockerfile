@@ -308,11 +308,9 @@ RUN cd / && \
 
 RUN mkdir /opt/files/
 
-COPY addReadCountsToVcfCRAM.py /usr/local/bin/addReadCountsToVcfCRAM.py
 COPY duphold_static /usr/local/bin/duphold_static
 COPY FilterManta.pl /usr/local/bin/FilterManta.pl
 COPY ichorToVCF.pl /usr/local/bin/ichorToVCF.pl
-COPY make_report.py /usr/local/bin/make_report.py
 COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
 COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds
 COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
@@ -328,9 +326,14 @@ COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
 COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
 
 COPY driver.py /opt/files/driver.py
+COPY Chromoseq.v17.wdl /opt/files/Chromoseq.v17.wdl
 
 COPY make_report3.py /usr/local/bin/make_report3.py
 COPY addReadCountsToVcfCRAM3.py /usr/local/bin/addReadCountsToVcfCRAM3.py
+
+COPY chromoseq_custom_anntations.040920.vcf.gz /opt/files/chromoseq_custom_anntations.040920.vcf.gz
+COPY chromoseq_custom_anntations.040920.vcf.gz.tbi /opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi
+COPY chromoseq_hotspot.vcf.gz /opt/files/chromoseq_hotspot.vcf.gz
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
