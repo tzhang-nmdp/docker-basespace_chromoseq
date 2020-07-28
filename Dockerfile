@@ -167,7 +167,7 @@ ENV PATH $CONDA_DIR/bin:$PATH
 
 RUN cd /tmp && \
     mkdir -p $CONDA_DIR && \
-    curl -s https://repo.continuum.io/miniconda/Miniconda3-4.3.21-Linux-x86_64.sh -o miniconda.sh && \
+    curl -s  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda.sh && \
     /bin/bash miniconda.sh -f -b -p $CONDA_DIR && \
     rm miniconda.sh && \
     $CONDA_DIR/bin/conda config --system --add channels conda-forge && \
@@ -179,11 +179,8 @@ RUN conda config --add channels bioconda && \
     conda install -c anaconda biopython scipy cython cyvcf2 && \
     conda install -y -c bioconda mosdepth
 
-RUN cd /tmp && git clone https://github.com/pysam-developers/pysam.git && \
-    cd pysam && \
-    export HTSLIB_LIBRARY_DIR=$HTSLIB_INSTALL_DIR/lib && \
-    export HTSLIB_INCLUDE_DIR=$HTSLIB_INSTALL_DIR/include && \
-    python setup.py install
+# NOTE- I think this is just for script addReadCountsToVcfCRAM
+RUN conda install -y pysam
 
 # Install Python 2 
 RUN conda create --quiet --yes -p $CONDA_DIR/envs/python2 python=2.7 'pip' && \
