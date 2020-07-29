@@ -165,9 +165,14 @@ RUN cd /tmp/ && \
 ENV CONDA_DIR /opt/conda
 ENV PATH $CONDA_DIR/bin:$PATH
 
+#originally installed 
+#https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh, which is 
+#https://repo.anaconda.com/miniconda/Miniconda3-py38_4.8.3-Linux-x86_64.sh
+#this is python 3.8, but cyvcf2. a necessary package for make_report[3].py, only has builds
+#switching to current for python 3.7
 RUN cd /tmp && \
     mkdir -p $CONDA_DIR && \
-    curl -s  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -o miniconda.sh && \
+    curl -s https://repo.anaconda.com/miniconda/Miniconda3-py37_4.8.2-Linux-x86_64.sh -o miniconda.sh && \
     /bin/bash miniconda.sh -f -b -p $CONDA_DIR && \
     rm miniconda.sh && \
     $CONDA_DIR/bin/conda config --system --add channels conda-forge && \
