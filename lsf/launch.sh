@@ -1,0 +1,1 @@
+LSF_PRESERVE_ENVIRONMENT=false bsub -oo $OUTDIR/out.$NAME.log -eo $OUTDIR/err.$NAME.log -q research-hpc -a "docker(registry.gsc.wustl.edu/apipe-builder/genome_perl_environment:7)" /usr/bin/java -Dconfig.file=application.new.conf -jar /opt/cromwell.jar run -t wdl -i $OUTDIR/chromoseq.$NAME.json ../docker-basespace_chromoseq/Chromoseq.v12.wdl

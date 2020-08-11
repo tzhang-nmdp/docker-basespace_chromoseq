@@ -202,8 +202,8 @@ workflow ChromoSeq {
     sv_qc.qc_out,
     sv_qc.region_dist,
     annotate_variants.annotated_filtered_vcf,
-    make_report.report],  #make_bw.bigwig_file,
-#    make_igv.igv_xml],
+    make_report.report,
+    make_report.data_dump],
     OutputDir=OutputDir,
     jobGroup=JobGroup,
     docker=chromoseq_docker
@@ -525,7 +525,7 @@ task annotate_variants {
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf -o ${Name}.annotated_filtered.vcf \
-    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF)" && \
+    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) or (SOMATIC and (CLIN_SIG is pathogenic or CLIN_SIG is likely_pathogenic))" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }
@@ -618,6 +618,7 @@ task make_report {
   
   output {
     File report = "${Name}.chromoseq.txt"
+    File data_dump = "feature_summary.json"
   }
   
 }

@@ -13,14 +13,14 @@
             "id": "app-session-name"
         },
         {
-            "$type": "FileChooser",
-            "size": 500,
+            "$type": "AppResultChooser",
+            "size": 250,
             "valueType": "Input",
-            "extensionFilters": ".cram, .crai", 
-            "multiselect": true,
-            "label": "File",
-            "requiredMessage": "Please choose a file",
-            "id": "file-id"
+            "multiselect": "false",
+            "label": "App Result",
+            "required": true,
+            "requiredMessage": "Please choose an app result",
+            "id": "app-result-id"
         },
         {
             "$type": "ProjectChooser",

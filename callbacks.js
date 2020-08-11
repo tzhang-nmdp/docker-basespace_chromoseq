@@ -2,7 +2,7 @@ function launchSpec(dataProvider)
 {
     var ret = {
         commandLine: ['python', '-u', '/opt/files/driver.py'],
-        containerImageId: "mgibio/basespace_chromoseq:v11",
+        containerImageId: "mgibio/basespace_chromoseq:v12",
         Options: [ "bsfs.enabled=true" ]
     };
     return ret;

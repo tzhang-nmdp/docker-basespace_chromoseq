@@ -25,12 +25,15 @@ my $dragensession = '';
 my $biosamplename = '';
 my $chromoseqsession = '';
 
+my $force = 0;
+
 GetOptions("debug" => \$debug,
 	   "b|biosample=s" => \$biosamplename,
 	   "p|project=s" => \$ProjectName,
 	   "d|dragen=s" => \$dragensession,
 	   "c|chromoseq=s" => \$chromoseqsession,
-	   "o|out=s" => \$outdir);
+	   "o|out=s" => \$outdir,
+	   "f" => \$force);
 
 die $usage if (!$ProjectName || !$outdir || (scalar @ARGV < 1 && !$biosamplename && !$dragensession && !$chromoseqsession)) || ($biosamplename && $dragensession) || ($biosamplename && $chromoseqsession) || ($chromoseqsession && $dragensession);
 
@@ -85,17 +88,29 @@ if (scalar @ARGV > 0){
   chomp @biosample_check;
   my %biosamples = map { my @l = split(",",$_); $l[0] => $l[1] } @biosample_check[1..$#biosample_check];
   
-  die "Biosample $biosamplename is already on basespace. Exiting" if (defined($biosamples{$biosamplename}));
-  
-  print STDERR "No samples called $biosamplename found. Creating it...\n";
-  
-  my $metadata = join(" ",(map { "--metadata Sample.$_:$manifest{sample}{$_}" } keys %{$manifest{sample}}),
-		      (map { "--metadata LibrarySummary.$_:$manifest{library_summary}{$_}" } keys %{$manifest{library_summary}}));
-  
-  `$BS create biosample -n $biosamplename $manifest{library}{full_name} -p $ProjectName $metadata | tee $outdir/$biosamplename.$manifest{index_illumina}{analysis_id}.create_biosample.json`;
-  
-  # for some reason it takes a few seconds for the new biosample to register
-  sleep 10;
+  if (defined($biosamples{$biosamplename}) and $force){
+      my $unlock_json = from_json(`$BS biosample get -n $biosamplename -f json`);
+      if ($unlock_json->{Status} eq 'Locked'){
+	  `$BS biosample unlock --ignore-unlocked $unlock_json->{Id}`;
+      } elsif ($unlock_json->{Status} ne 'New'){
+	  die "biosample unlocking failed";
+      }
+      
+  } elsif (!defined($biosamples{$biosamplename})){
+      
+      print STDERR "No samples called $biosamplename found. Creating it...\n";
+      
+      my $metadata = join(" ",(map { "--metadata Sample.$_:$manifest{sample}{$_}" } keys %{$manifest{sample}}),
+			  (map { "--metadata LibrarySummary.$_:$manifest{library_summary}{$_}" } keys %{$manifest{library_summary}}));
+      
+      `$BS create biosample -n $biosamplename $manifest{library}{full_name} -p $ProjectName $metadata | tee $outdir/$biosamplename.$manifest{index_illumina}{analysis_id}.create_biosample.json`;
+      
+      # for some reason it takes a few seconds for the new biosample to register
+      sleep 10;
+      
+  } else {
+      die "Biosample $biosamplename is already on basespace. Exiting";
+  }
   
   my $dirs = join(" ", @dirs);
   
@@ -137,23 +152,13 @@ if ($dragensession){
 
   die "failed to get dataset for dragen session $dragensession" if !$dragenresult;
 
-  # get cram files, first by getting the appresult for the dragen process, then the file id from that process
-  my $appresultId = `$BS dataset get -i $dragenresult -F V1pre3Id -f csv`;
-  chomp $appresultId;
-  $appresultId =~ s/[^0-9]+//g;
-
-  die "failed to get appresult for dragen session $dragensession" if !$appresultId;
-  
-  my @cram = `$BS appresult content -i $appresultId --extension=cram,crai --terse`;
-  chomp @cram;
-  
-  die "Error getting cram and cram index dragen session $dragensession" if scalar @cram != 2;
-  
-  my $files = join(",",@cram);
+  #my $dragenappresultid = `$BS appresult list --filter-field=AppSession.Id --filter-term=$dragensession --terse`;
+  #it's not expecting the actual ID- if used, chromoseq launch step returns error:
+  #*** BASESPACE.VALIDATION_STRATEGY.CONTENT_REFERENCE_NOT_RESOLVED: Resource 'datasets/$appresultid' doesn't exist. ***
   
   # launch chromoseq
   my $label = "Chromoseq $biosamplename " . localtime();
-  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$ref_fasta -o file-id:$files -f json | tee $outdir/$biosamplename.chromoseq.json`);
+  my $chromoseq_session = from_json(`$BS launch application -i $CHROMOSEQAPP -o app-session-name:\"$label\" -o project-id:$ProjectId -o ref-fa-id:$ref_fasta -o app-result-id:$dragenresult -f json | tee $outdir/$biosamplename.chromoseq.json`);
 
   print STDERR "Launching Chromoseq: $label. Waiting...\n";
   

@@ -192,6 +192,7 @@ RUN conda create --quiet --yes -p $CONDA_DIR/envs/python2 python=2.7 'pip' && \
     conda clean -tipsy && \
     /bin/bash -c "source activate python2 && \
     conda install -c anaconda svtools && \
+    conda install -c bioconda bcftools && \
     source deactivate"
 
 #
