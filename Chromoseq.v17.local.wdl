@@ -3,6 +3,10 @@ workflow ChromoSeq {
   String Cram
   String CramIndex 
   String Name
+  String Gender
+  String MappingSummary
+  String? CoverageSummary
+  String TumorCounts
   String OutputDir
   
   String Translocations
@@ -10,7 +14,12 @@ workflow ChromoSeq {
   
   String Cytobands
   String SVDB
-  
+
+  String CustomAnnotationVcf #   = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz"
+  String CustomAnnotationIndex # = "/gscmnt/gc3042/cle_validation/myeloseq_haloplex/accessory_files/myeloseq_custom_annotations.annotated.011618.b37.vcf.gz.tbi"
+  String CustomAnnotationParameters #= "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
+
+  String HotspotVCF
   String MantaConfig
   
   String Reference
@@ -27,12 +36,20 @@ workflow ChromoSeq {
 
   String tmp
   
-  Float minVarFreq
+  Float minVarFreq = 0.02
+  Int MinReads = 3
+  Float varscanPvalindel = 0.1
+  Float varscanPvalsnv = 0.01
+
+  Int MinCNASize = 2000000
+  Float MinCNAabund = 5.0
+  Int LowCNASize = 50000000
+  Float LowCNAabund = 10.0
   
   String JobGroup  
 
-  String chromoseq_docker
-  
+  String? chromoseq_docker
+
   call prepare_bed {
     input: Bedpe=Translocations,
     Bed=GenesBed,
@@ -76,32 +93,20 @@ workflow ChromoSeq {
     docker=chromoseq_docker
   }
     
-  scatter (chr in prepare_bed.chroms){
-    call count_reads {
-      input: Bam=Cram,
-      BamIndex=CramIndex,
-      ReferenceBED=ReferenceBED,
-      refFasta=Reference,
-      refIndex=ReferenceIndex,
-      Chrom=chr,
-      jobGroup=JobGroup,
-      tmp=tmp,
-      docker=chromoseq_docker
-    }
-  }
-  
   call run_ichor {
     input: Bam=Cram,
     BamIndex=CramIndex,
     refFasta=Reference,
     ReferenceBED=ReferenceBED,
-    CountFiles=count_reads.counts_bed,
+    tumorCounts=TumorCounts,
+    gender=Gender,
     gcWig=gcWig,
     mapWig=mapWig,
     ponRds=ponRds,
     centromeres=centromeres,
     Name=Name,
     genomeStyle = genomeStyle,
+    genome = genome,
     jobGroup=JobGroup,
     tmp=tmp,
     docker=chromoseq_docker
@@ -112,6 +117,8 @@ workflow ChromoSeq {
     BamIndex=CramIndex,
     CoverageBed=GenesBed,
     MinFreq=minVarFreq,
+    pvalsnv=varscanPvalsnv,
+    pvalindel=varscanPvalindel,
     refFasta=Reference,
     Name=Name,
     jobGroup=JobGroup,
@@ -130,15 +137,18 @@ workflow ChromoSeq {
     tmp=tmp,
     docker=chromoseq_docker
   }
-    
+
   call combine_variants {
     input: VCFs=[run_varscan.varscan_snv_file,
     run_varscan.varscan_indel_file,
-    run_pindel_flt3itd.pindel_vcf_file],
+    run_pindel_flt3itd.pindel_vcf_file,
+    HotspotVCF],
     Bam=Cram,
     BamIndex=CramIndex,
     refFasta=Reference,
     Name=Name,
+    MinReads=MinReads,
+    MinVAF=minVarFreq,
     jobGroup=JobGroup,
     tmp=tmp,
     docker=chromoseq_docker
@@ -149,6 +159,9 @@ workflow ChromoSeq {
     refFasta=Reference,
     Vepcache=VEP,
     Cytobands=Cytobands,
+    CustomAnnotationVcf=CustomAnnotationVcf,
+    CustomAnnotationIndex=CustomAnnotationIndex,
+    CustomAnnotationParameters=CustomAnnotationParameters,
     Name=Name,
     jobGroup=JobGroup,
     tmp=tmp,
@@ -164,7 +177,12 @@ workflow ChromoSeq {
     SVAnnot=SVDB,
     Translocations=Translocations,
     Cytobands=Cytobands,
+    minCNAsize=MinCNASize,
+    minCNAabund=MinCNAabund,
+    lowCNAsize=LowCNASize,
+    lowCNAabund=LowCNAabund,    
     Name=Name,
+    gender=Gender,
     jobGroup=JobGroup,
     tmp=tmp,
     docker=chromoseq_docker
@@ -176,7 +194,8 @@ workflow ChromoSeq {
     KnownGenes=prepare_bed.genes,
     GeneQC=gene_qc.qc_out,
     SVQC=sv_qc.qc_out,
-    CovQC=gene_qc.global_dist,
+    MappingSummary=MappingSummary,
+    CoverageSummary=CoverageSummary,
     Name=Name,
     jobGroup=JobGroup,
     docker=chromoseq_docker,
@@ -202,8 +221,8 @@ workflow ChromoSeq {
     sv_qc.qc_out,
     sv_qc.region_dist,
     annotate_variants.annotated_filtered_vcf,
-    make_report.report,
-    make_report.data_dump],
+    make_report.report],  #make_bw.bigwig_file,
+#    make_igv.igv_xml],
     OutputDir=OutputDir,
     jobGroup=JobGroup,
     docker=chromoseq_docker
@@ -217,11 +236,11 @@ task prepare_bed {
   String Reference
   String jobGroup
   String? tmp
-  String docker
+  String? docker = "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
   
   command <<<
     awk -v OFS="\t" '{ split($7,a,"_"); print $1,$2,$3,a[1],".",$9; print $4,$5,$6,a[2],".",$10; }' ${Bedpe} | sort -u -k 1,1V -k 2,2n > sv.bed
-    cat sv.bed ${Bed} | cut -f 4 > genes.txt
+    ((cat sv.bed | cut -f 4) && (cat ${Bed} | cut -f 6)) > genes.txt
     gunzip -c ${Reference} | cut -f 1 > chroms.txt
   >>>
 
@@ -247,7 +266,7 @@ task cov_qc {
   String refFasta
   String jobGroup
   String tmp
-  String docker
+  String? docker = "dhspence/docker-mosdepth"
   
   command <<<
     set -eo pipefail && \
@@ -281,7 +300,7 @@ task run_manta {
   String ReferenceBED
   String jobGroup
   String tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command <<<
     set -eo pipefail && \
@@ -313,7 +332,7 @@ task count_reads {
   String refFasta
   String refIndex
   String tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command {
     set -eo pipefail && \
@@ -339,31 +358,40 @@ task run_ichor {
   String Bam
   String BamIndex
   String ReferenceBED
-  Array[String] CountFiles
+  String tumorCounts
   String refFasta
   String Name
+  String gender
+  String genome
   String genomeStyle
   String jobGroup
   String gcWig
   String mapWig
   String ponRds
   String centromeres
+  
+  Int? minCNAsize
+  Float? lowAbundVal
+  Int? lowAbundCnaSize
+  
   String? tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command <<<
     set -eo pipefail && \
-    cat ${sep=" " CountFiles} | sort -k 1,1V -k 2,2n | \
-    awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $4; }' > "${Name}.tumor.wig" && \
-    /usr/local/bin/Rscript /usr/local/bin/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
+    tail -n +6 ${tumorCounts} | sort -k 1V,1 -k 2n,2 | awk -v window=500000 'BEGIN { chr=""; } { if ($1!=chr){ printf("fixedStep chrom=%s start=1 step=%d span=%d\n",$1,window,window); chr=$1; } print $5; }' > "${Name}.tumor.wig" && \
+    /usr/local/bin/Rscript /gscmnt/gc2555/spencer/dhs/git/ichorCNA/scripts/runIchorCNA.R --id ${Name} \
     --WIG "${Name}.tumor.wig" --ploidy "c(2)" --normal "c(0.1,0.5,.85)" --maxCN 3 \
     --gcWig ${gcWig} \
     --mapWig ${mapWig} \
     --centromere ${centromeres} \
     --normalPanel ${ponRds} \
-    --includeHOMD False --chrs "c(1:22, \"X\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
+    --genomeBuild ${genome} \
+    --sex ${gender} \
+    --includeHOMD False --chrs "c(1:22, \"X\", \"Y\")" --chrTrain "c(1:22)" --fracReadsInChrYForMale 0.0005 \
     --estimateNormal True --estimatePloidy True --estimateScPrevalence True \
-    --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /usr/local/bin/ichorCNA/ && \
+    --txnE 0.999999 --txnStrength 1000000 --genomeStyle ${genomeStyle} --outDir ./ --libdir /gscmnt/gc2555/spencer/dhs/git/ichorCNA/ && \
+    awk -v G=${gender} '$2!~/Y/ || G=="male"' "${Name}.seg.txt" > "${Name}.segs.txt" && \
     mv ${Name}/*.pdf .
   >>>
   
@@ -376,10 +404,10 @@ task run_ichor {
   
   output {
     File params = "${Name}.params.txt"
-    File seg = "${Name}.seg.txt"
+    File seg = "${Name}.segs.txt"
     File genomewide_pdf = "${Name}_genomeWide.pdf"
     File allgenomewide_pdf = "${Name}_genomeWide_all_sols.pdf"
-    File correct_pdf = "${Name}_correct.pdf"
+    File correct_pdf = "${Name}_genomeWideCorrection.pdf"
     File rdata = "${Name}.RData"
     File wig = "${Name}.tumor.wig"
   }
@@ -391,19 +419,21 @@ task run_varscan {
   Int? MinCov
   Float? MinFreq
   Int? MinReads
+  Float? pvalindel
+  Float? pvalsnv
   String CoverageBed
   String refFasta
   String Name
   String jobGroup
   String? tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command <<<
     /usr/local/bin/samtools mpileup -f ${refFasta} -l ${CoverageBed} ${Bam} > ${tmp}/mpileup.out && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2snp ${tmp}/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
-    --min-var-freq ${default="0.02" MinFreq} --output-vcf | bgzip -c > ${Name}.snv.vcf.gz && tabix ${Name}.snv.vcf.gz && \
+    --min-var-freq ${default="0.02" MinFreq} --p-value ${default="0.01" pvalsnv} --output-vcf | bgzip -c > ${Name}.snv.vcf.gz && tabix ${Name}.snv.vcf.gz && \
     java -Xmx12g -jar /opt/varscan/VarScan.jar mpileup2indel ${tmp}/mpileup.out --min-coverage ${default=6 MinCov} --min-reads2 ${default=3 MinReads} \
-    --min-var-freq ${default="0.02" MinFreq} --output-vcf | bgzip -c > ${Name}.indel.vcf.gz && tabix ${Name}.indel.vcf.gz
+    --min-var-freq ${default="0.02" MinFreq} --p-value ${default="0.1" pvalindel} --output-vcf | bgzip -c > ${Name}.indel.vcf.gz && tabix ${Name}.indel.vcf.gz
   >>>
   
   runtime {
@@ -429,7 +459,7 @@ task run_pindel_region {
   String jobGroup
   String? tmp
   String genome
-  String docker
+  String? docker
   
   command <<<
     (set -eo pipefail && /usr/local/bin/samtools view -T ${refFasta} ${Bam} ${Reg} | /opt/pindel-0.2.5b8/sam2pindel - ${tmp}/in.pindel ${default=250 Isize} tumor 0 Illumina-PairEnd) && \
@@ -459,7 +489,7 @@ task run_platypus {
   String refFasta
   String jobGroup
   String? tmp
-  String docker
+  String? docker
   
   command <<<
     /usr/bin/awk '{ print $1":"$2+1"-"$3; }' ${CoverageBed} > "regions.txt" && \
@@ -484,14 +514,16 @@ task combine_variants {
   String BamIndex
   String refFasta
   String Name
+  Int MinReads
+  Float MinVAF
   String jobGroup
   String? tmp
-  String docker
-  
+  String? docker = "mgibio/basespace_chromoseq:v12"
+
   command {
     /opt/conda/envs/python2/bin/bcftools merge --force-samples -O z ${sep=" " VCFs} | \
-    /opt/conda/envs/python2/bin/bcftools norm -f ${refFasta} > ${tmp}/combined.vcf && \
-    /opt/conda/bin/python /usr/local/bin/addReadCountsToVcfCRAM.py -r ${refFasta} ${tmp}/combined.vcf ${Bam} ${Name} | \
+    /opt/conda/envs/python2/bin/bcftools norm -m- -f ${refFasta} -O z > ${tmp}/combined.vcf.gz && /usr/bin/tabix -p vcf ${tmp}/combined.vcf.gz && \
+    /opt/conda/bin/python /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/addReadCountsToVcfCRAM3.py -n ${MinReads} -v ${MinVAF} -r ${refFasta} ${tmp}/combined.vcf.gz ${Bam} ${Name} | \
     bgzip -c > ${Name}.combined_tagged.vcf.gz && /usr/bin/tabix -p vcf ${Name}.combined_tagged.vcf.gz
   }
   runtime {
@@ -503,7 +535,7 @@ task combine_variants {
   output {
     File combined_vcf_file = "${Name}.combined_tagged.vcf.gz"
   }
-  
+
 }
 
 task annotate_variants {
@@ -511,21 +543,24 @@ task annotate_variants {
   String refFasta
   String Vepcache
   String Cytobands
+  File CustomAnnotationVcf
+  File CustomAnnotationIndex
+  String CustomAnnotationParameters
   Float? maxAF
   String Name
   String jobGroup
   String? tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command {
     set -eo pipefail && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl \
     --format vcf --vcf --fasta ${refFasta} --hgvs --symbol --term SO --per_gene -o ${Name}.annotated.vcf \
-    -i ${Vcf} --custom ${Cytobands},cytobands,bed --offline --cache --max_af --dir ${Vepcache} && \
+    -i ${Vcf} --custom ${Cytobands},cytobands,bed --custom ${CustomAnnotationVcf},${CustomAnnotationParameters} --offline --cache --max_af --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated.vcf > ${Name}.annotated.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /opt/vep/ensembl-vep/filter_vep -i ${Name}.annotated.vcf.gz --format vcf -o ${Name}.annotated_filtered.vcf \
-    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) or (SOMATIC and (CLIN_SIG is pathogenic or CLIN_SIG is likely_pathogenic))" && \
+    --filter "(MAX_AF < ${default='0.001' maxAF} or not MAX_AF) or MYELOSEQ_TCGA_AC or MYELOSEQ_MDS_AC" && \
     /opt/htslib/bin/bgzip -c ${Name}.annotated_filtered.vcf > ${Name}.annotated_filtered.vcf.gz && \
     /usr/bin/tabix -p vcf ${Name}.annotated_filtered.vcf.gz
   }
@@ -548,19 +583,27 @@ task annotate_svs {
   String refFastaIndex
   String Vepcache
   String Name
+  String gender
   String jobGroup
   String SVAnnot
   String Translocations
   String Cytobands
+  Int? minCNAsize
+  Float? minCNAabund
+  Int? lowCNAsize
+  Float? lowCNAabund
+  
   String? tmp
-  String docker
+  String? docker = "mgibio/basespace_chromoseq:v12"
   
   command {
     set -eo pipefail && \
-    perl /usr/local/bin/ichorToVCF.pl -r ${refFasta} ${CNV} | bgzip -c > cnv.vcf.gz && \
+    perl /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/ichorToVCF.pl -g ${gender} -minsize ${minCNAsize} \
+    -minabund ${minCNAabund} -lowsize ${lowCNAsize} \
+    -lowabund ${lowCNAabund} -r ${refFasta} ${CNV} | bgzip -c > cnv.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf cnv.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools query -l cnv.vcf.gz > name.txt && \
-    perl /usr/local/bin/FilterManta.pl -r ${refFasta} -k ${Translocations} ${Vcf} filtered.vcf && \
+    perl /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/FilterManta.pl -a ${minCNAabund} -r ${refFasta} -k ${Translocations} ${Vcf} filtered.vcf && \
     /opt/conda/envs/python2/bin/svtools afreq filtered.vcf | \
     /opt/conda/envs/python2/bin/svtools vcftobedpe -i stdin | \
     /opt/conda/envs/python2/bin/svtools varlookup -d 200 -c BLACKLIST -a stdin -b ${SVAnnot} | \
@@ -569,7 +612,8 @@ task annotate_svs {
     /opt/conda/envs/python2/bin/bcftools reheader -s name.txt filtered.tagged.vcf.gz > filtered.tagged.reheader.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf filtered.tagged.reheader.vcf.gz && \
     /opt/conda/envs/python2/bin/bcftools concat -a cnv.vcf.gz filtered.tagged.reheader.vcf.gz | \
-    /usr/local/bin/bedtools sort -header -g ${refFastaIndex} -i stdin | bgzip -c > svs.vcf.gz && \
+    /usr/local/bin/bedtools sort -header -g ${refFastaIndex} -i stdin > svs.vcf && \
+    /opt/conda/envs/python2/bin/python /usr/local/src/manta/libexec/convertInversion.py /usr/local/bin/samtools ${refFasta} svs.vcf | bgzip -c > svs.vcf.gz && \
     /usr/bin/perl -I /opt/lib/perl/VEP/Plugins /usr/bin/variant_effect_predictor.pl --format vcf --vcf --fasta ${refFasta} --per_gene --symbol --term SO -o ${Name}.svs_annotated.vcf -i svs.vcf.gz --custom ${Cytobands},cytobands,bed --offline --cache --dir ${Vepcache} && \
     /opt/htslib/bin/bgzip -c ${Name}.svs_annotated.vcf > ${Name}.svs_annotated.vcf.gz && \
     /opt/htslib/bin/tabix -p vcf ${Name}.svs_annotated.vcf.gz
@@ -593,22 +637,22 @@ task make_report {
   String SVVCF
   String GeneVCF
   String KnownGenes
+  String MappingSummary
+  String? CoverageSummary
   String SVQC
   String GeneQC
-  String CovQC
   String Name
   String jobGroup
   String tmp
-  String docker
+  String? docker = ""
   Int? MinGeneCov
   Int? MinFracGene20
   Int? MinRegionCov
   Int? MinFracRegion10
   
   command <<<
-    /opt/conda/bin/python /usr/local/bin/make_report.py ${Name} ${GeneVCF} ${SVVCF} ${KnownGenes} > "${Name}.chromoseq.txt" && \
-    awk -v F=${default=95 MinFracGene20} -v C=${default=20 MinGeneCov} 'BEGIN { printf("\n*** Gene Coverage Metrics: Exons with <%d%% at 20x or <%dx mean coverage ***\n",F,C) } NR==1 || $10<F || $13<C { print $0; } END { printf("\n"); }' ${GeneQC} >> "${Name}.chromoseq.txt" && \
-    awk -v F=${default=95 MinFracRegion10} -v C=${default=10 MinRegionCov} 'BEGIN { printf("\n*** SV Region Coverage Metrics: Genes with <%d%% at 10x or <%dx mean coverage ***\n",F,C) } NR==1 || $9<F || $13<C { print $0; } END { printf("\n"); }' ${SVQC} >> "${Name}.chromoseq.txt"
+    cat ${MappingSummary} ${CoverageSummary} | cut -d ',' -f 3,4 | sort -u > qc.txt && \
+    /opt/conda/bin/python /gscmnt/gc2555/spencer/dhs/git/docker-basespace_chromoseq/make_report3.py ${Name} ${GeneVCF} ${SVVCF} ${KnownGenes} "qc.txt" ${GeneQC} ${SVQC} > "${Name}.chromoseq.txt"
   >>>
   
   runtime {
@@ -618,7 +662,6 @@ task make_report {
   
   output {
     File report = "${Name}.chromoseq.txt"
-    File data_dump = "feature_summary.json"
   }
   
 }
@@ -674,7 +717,7 @@ task gather_files {
   Array[String] OutputFiles
   String OutputDir
   String jobGroup
-  String docker
+  String? docker = "registry.gsc.wustl.edu/genome/lims-compute-xenial:1"
   
   command {
     /bin/mv -f -t ${OutputDir}/ ${sep=" " OutputFiles}

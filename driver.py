@@ -81,7 +81,11 @@ wf_inputs_dict = \
     "ChromoSeq.tmp": "/tmp",
     "ChromoSeq.minVarFreq": 0.02,
     "ChromoSeq.JobGroup": "dummy",
-    "ChromoSeq.chromoseq_docker": "mgibio/basespace_chromoseq"
+    "ChromoSeq.chromoseq_docker": "dummy",
+    "ChromoSeq.CustomAnnotationVcf": "/opt/files/chromoseq_custom_anntations.040920.vcf.gz",
+    "ChromoSeq.CustomAnnotationIndex": "/opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi",
+    "ChromoSeq.HotspotVCF": "/opt/files/chromoseq_hotspot.vcf.gz",
+    "ChromoSeq.CustomAnnotationParameters": "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
 }
 
 with open("/opt/files/inputs.json", "w+") as f:
@@ -117,6 +121,6 @@ with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
 print('\nLaunching cromwell')
-cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v12.wdl"]
+cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v17.wdl"]
 subprocess.check_call(cromwell_cmd)
 print('\nCromwell complete')
