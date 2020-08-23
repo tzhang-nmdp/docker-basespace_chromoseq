@@ -9,30 +9,21 @@
             "value": "Example [LocalDateTime]",
             "label": "Analysis Name",
             "required": true,
-            "requiredMessage": "Please enter name for your app session.",
+            "requiredMessage": "Please enter a name for your app session.",
+            "helpText": "The name that will be used for this app session",
             "id": "app-session-name"
         },
         {
             "$type": "AppResultChooser",
-            "size": 250,
-            "valueType": "Input",
-            "multiselect": "false",
-            "label": "App Result",
-            "required": true,
-            "requiredMessage": "Please choose an app result",
-            "id": "app-result-id"
-        },
-        {
-            "$type": "ProjectChooser",
-            "size": 300,
-            "valueType": "Output",
-            "allowedPermissions": "owner",
-            "label": "Save Results To",
-            "required": true,
-            "requiredMessage": "Please choose a project",
-            "id": "project-id",
-            "allowResourceCreation": true,
-            "rules": "is-project-owner"
+	        "size": 250,
+	        "valueType": "Input",
+	        "multiselect": "false",
+        	"label": "Dragen Alignment Results",
+        	"required": true,
+        	"requiredMessage": "Please choose a Dragen alignment",
+            "helpText": "The Dragen alignment results that you wish to analyze",
+            "searchQuery": "App.Id:6840834 OR App.Id:10489479",
+	        "id": "app-result-id"
         },
         {
             "$type": "FileChooser",
@@ -40,12 +31,48 @@
             "valueType": "Input",
             "extensionFilters": ".fa, .fasta", 
             "label": "Reference fasta",
-            "requiredMessage": "Please choose a reference",
+            "required": true,
+            "requiredMessage": "Please choose the reference fasta",
+            "helpText": "The reference fasta file that was used in the Dragen alignment",
             "id": "ref-fa-id"
         },
+        
         {
-            "$type": "SectionBreak"
+            "$type": "Select",
+            "id": "gender-select-id",
+	        "label": "Select Sex",
+            "required": true,
+            "requiredMessage": "Please choose the sample's sex",
+            "helpText": "The sex of the sample to be analyzed",
+	        "multiselect": false,
+	        "choices": [
+		        {
+		        	"value": "male",
+		        	"text": "Male",
+	        		"selected": true
+	        	},
+	        	{
+	        		"value": "female",
+	        		"text": "Female",
+	        		"selected": false
+	        	}
+        	],
+            
+        },        
+        
+        {
+            "$type": "ProjectChooser",
+            "size": 300,
+            "valueType": "Output",
+            "allowedPermissions": "owner",
+            "label": "Save Results To",
+            "required": true,
+            "requiredMessage": "Please choose where to save results",
+            "id": "project-id",
+            "allowResourceCreation": true,
+            "rules": "is-project-owner"
         }
+        
     ],
     "rulesets":[
         {

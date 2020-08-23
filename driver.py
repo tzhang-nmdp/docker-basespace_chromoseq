@@ -29,6 +29,8 @@ for e in appsession['Properties']['Items']:
         project_id = e['Items'][0]['Id'] #note that this will return a unicode object, not a str; this is still python 2.7.x, so these are 2 different things
     if e['Name'] == 'Input.Files':
         file_href = e['Items'][0]['Href'] #note that this is a hardcoded example; there may be multiple requiring more complex logic in production
+    if e['Name'] == 'Input.gender-select-id':
+        sample_sex = str(e['Content'])
 appsession_href = appsession['Href'] #basespace internal reference to the current appsession
 
 cram_search = glob.glob('/data/input/appresults/*/*.cram')
@@ -44,10 +46,22 @@ if len(ref_search) != 1:
     print('Error- expected 1 reference fasta file but found {0}'.format(len(ref_search)))
     sys.exit(1)
 
+map_summary_search = glob.glob('/data/input/appresults/*/*.mapping_metrics.csv') #required
+if len(map_summary_search) != 1:
+    print('Error- expected 1 mapping summary file but found {0}'.format(len(map_summary_search)))
+    sys.exit(1)
+
+cov_summary_search = glob.glob('/data/input/appresults/*/*.wgs_coverage_metrics.csv') #optional
+cov_found = len(cov_summary_search) == 1
+
 cram_file = cram_search[0]
 crai_file = crai_search[0]
 ref_file_temp = ref_search[0]
 name = cram_file.split("/")[-1].split(".")[0]
+
+mapping_summary_file = map_summary_search[0]
+if cov_found:
+    coverage_summary_file = cov_summary_search[0]
 
 ref_file = '/opt/files/all_sequences.fa'
 subprocess.check_call(['ln', '-s', ref_file_temp, ref_file])
@@ -85,8 +99,13 @@ wf_inputs_dict = \
     "ChromoSeq.CustomAnnotationVcf": "/opt/files/chromoseq_custom_anntations.040920.vcf.gz",
     "ChromoSeq.CustomAnnotationIndex": "/opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi",
     "ChromoSeq.HotspotVCF": "/opt/files/chromoseq_hotspot.vcf.gz",
-    "ChromoSeq.CustomAnnotationParameters": "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST"
+    "ChromoSeq.CustomAnnotationParameters": "MYELOSEQ,vcf,exact,0,TCGA_AC,MDS_AC,MYELOSEQBLACKLIST",
+    "ChromoSeq.Gender": sample_sex,
+    "ChromoSeq.MappingSummary": mapping_summary_file
 }
+
+if cov_found:
+    wf_inputs_dict['ChromoSeq.CoverageSummary'] = coverage_summary_file
 
 with open("/opt/files/inputs.json", "w+") as f:
     json.dump(wf_inputs_dict, f)

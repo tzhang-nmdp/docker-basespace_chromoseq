@@ -341,6 +341,8 @@ COPY chromoseq_custom_anntations.040920.vcf.gz /opt/files/chromoseq_custom_annta
 COPY chromoseq_custom_anntations.040920.vcf.gz.tbi /opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi
 COPY chromoseq_hotspot.vcf.gz /opt/files/chromoseq_hotspot.vcf.gz
 
+COPY logging_helper.sh /opt/files/logging_helper.sh
+
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
 
