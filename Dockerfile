@@ -245,7 +245,7 @@ RUN mkdir -p /tmp/ucsc && \
 WORKDIR /usr/local/bin
 RUN git clone https://github.com/GavinHaLab/ichorCNA.git
 RUN cd ichorCNA && git checkout -b bugfix_rollback b2bbce0a9997f31733f0f0ea4278cfba937ded41
-RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager')); BiocManager::install(c('HMMcopy','GenomeInfoDb','GenomicRanges'))"
+RUN Rscript -e "install.packages(c('plyr', 'optparse','BiocManager', 'foreach', 'doMC')); BiocManager::install(c('HMMcopy','GenomeInfoDb','GenomicRanges'))"
 RUN R CMD INSTALL ichorCNA
 
 
@@ -341,6 +341,7 @@ COPY addReadCountsToVcfCRAM3.py /usr/local/bin/addReadCountsToVcfCRAM3.py
 COPY chromoseq_custom_anntations.040920.vcf.gz /opt/files/chromoseq_custom_anntations.040920.vcf.gz
 COPY chromoseq_custom_anntations.040920.vcf.gz.tbi /opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi
 COPY chromoseq_hotspot.vcf.gz /opt/files/chromoseq_hotspot.vcf.gz
+COPY chromoseq_hotspot.vcf.gz.tbi /opt/files/chromoseq_hotspot.vcf.gz.tbi
 
 COPY logging_helper.sh /opt/files/logging_helper.sh
 
