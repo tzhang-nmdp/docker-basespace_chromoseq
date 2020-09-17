@@ -10,6 +10,9 @@ os.chdir('/opt/files')
 #subprocess.check_call(['gunzip', 'all_sequences.fa.gz'])
 #print('Done decompressing')
 
+print('Chromoseq Basespace App v1.0.0')
+print('Source code available at https://github.com/genome/docker-basespace_chromoseq')
+
 #download and setup VEP cache
 print('Downloading VEP cache, this may take a while...')
 subprocess.check_call(['curl', '-OsS', 'ftp://ftp.ensembl.org/pub/release-90/variation/VEP/homo_sapiens_vep_90_GRCh38.tar.gz'])
@@ -109,8 +112,6 @@ if cov_found:
 
 with open("/opt/files/inputs.json", "w+") as f:
     json.dump(wf_inputs_dict, f)
-
-
 
 #create metadata file required by basespace for upload; each workflow generated ouput file is tagged
 #with the downloaded basespace file(s) used to generate it
