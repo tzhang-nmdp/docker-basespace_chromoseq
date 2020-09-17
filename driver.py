@@ -28,12 +28,15 @@ with open("/data/input/AppSession.json") as a_s_j:
 #finding the ID of the project from which this analysis was launched; this is needed in order
 #to create the directory structure specified by basespace for automatic result uploading
 for e in appsession['Properties']['Items']:
-    if e['Name'] == 'Input.Projects':
+    if e['Name'] == 'Output.Projects':
         project_id = e['Items'][0]['Id'] #note that this will return a unicode object, not a str; this is still python 2.7.x, so these are 2 different things
-    if e['Name'] == 'Input.Files':
-        file_href = e['Items'][0]['Href'] #note that this is a hardcoded example; there may be multiple requiring more complex logic in production
-    if e['Name'] == 'Input.gender-select-id':
+    elif e['Name'] == 'Input.Files':
+        ref_fa_input_obj = e
+    elif e['Name'] == 'Input.AppResults':
+        dragen_input_obj = e
+    elif e['Name'] == 'Input.gender-select-id':
         sample_sex = str(e['Content'])
+        gender_input_obj = e
 appsession_href = appsession['Href'] #basespace internal reference to the current appsession
 
 cram_search = glob.glob('/data/input/appresults/*/*.cram')
@@ -124,18 +127,13 @@ metadata_json_template = \
     "Name": name,
     "Description": "Outputs from Chromoseq workflow run on {}".format(cram_file),
     "HrefAppSession": appsession_href,
-    "Properties": [
-        {
-            "Type": "file[]",
-            "Name": "Input.Files",
-            "Items": [
-            
-		]
-        }
-    ]
+    "Properties": []
 }
-#TODO does metadata need to be tracked for/did any of the above indices change because of the addition of the reference fa field
-metadata_json_template['Properties'][0]['Items'].append(file_href) #TODO should all files be included here? if not this line can be deleted and assignment placed inline
+
+metadata_json_template['Properties'].append(ref_fa_input_obj)
+metadata_json_template['Properties'].append(dragen_input_obj)
+metadata_json_template['Properties'].append(gender_input_obj)
+
 
 with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
