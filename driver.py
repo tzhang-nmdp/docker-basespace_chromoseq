@@ -28,11 +28,11 @@ with open("/data/input/AppSession.json") as a_s_j:
 #finding the ID of the project from which this analysis was launched; this is needed in order
 #to create the directory structure specified by basespace for automatic result uploading
 for e in appsession['Properties']['Items']:
-    if e['Name'] == 'Output.Projects':
+    if e['Name'] == 'Input.Projects':
         project_id = e['Items'][0]['Id'] #note that this will return a unicode object, not a str; this is still python 2.7.x, so these are 2 different things
-    elif e['Name'] == 'Input.Files':
+    elif e['Name'] == 'Input.ref-fa-id':
         ref_fa_input_obj = e
-    elif e['Name'] == 'Input.AppResults':
+    elif e['Name'] == 'Input.app-result-id':
         dragen_input_obj = e
     elif e['Name'] == 'Input.gender-select-id':
         sample_sex = str(e['Content'])
