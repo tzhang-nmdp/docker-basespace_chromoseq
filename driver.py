@@ -5,11 +5,6 @@ import glob, json, os, subprocess, sys
 #most files are in /opt/files, so switch to it and use as a working directory
 os.chdir('/opt/files')
 
-#decompress reference fasta file
-#print('Decompressing reference fasta...')
-#subprocess.check_call(['gunzip', 'all_sequences.fa.gz'])
-#print('Done decompressing')
-
 print('Chromoseq Basespace App v1.0.0')
 print('Source code available at https://github.com/genome/docker-basespace_chromoseq')
 
@@ -28,15 +23,14 @@ with open("/data/input/AppSession.json") as a_s_j:
 #finding the ID of the project from which this analysis was launched; this is needed in order
 #to create the directory structure specified by basespace for automatic result uploading
 for e in appsession['Properties']['Items']:
-    if e['Name'] == 'Input.Projects':
-        project_id = e['Items'][0]['Id'] #note that this will return a unicode object, not a str; this is still python 2.7.x, so these are 2 different things
+    if e['Name'] == 'Input.project-id':
+        project_id = str(e['Content']['Id']) #note that this will return a unicode object, not a str; this is still python 2.7.x, so these are 2 different things
     elif e['Name'] == 'Input.ref-fa-id':
-        ref_fa_input_obj = e
+        ref_fa_href = str(e['Content']['Href'])
     elif e['Name'] == 'Input.app-result-id':
-        dragen_input_obj = e
+        dragen_href = str(e['Content']['Href'])
     elif e['Name'] == 'Input.gender-select-id':
         sample_sex = str(e['Content'])
-        gender_input_obj = e
 appsession_href = appsession['Href'] #basespace internal reference to the current appsession
 
 cram_search = glob.glob('/data/input/appresults/*/*.cram')
@@ -127,18 +121,29 @@ metadata_json_template = \
     "Name": name,
     "Description": "Outputs from Chromoseq workflow run on {}".format(cram_file),
     "HrefAppSession": appsession_href,
-    "Properties": []
+    "Properties": [
+        {
+            "Type": "appresult[]",
+            "Name": "Input.AppResults",
+            "Items": [dragen_href]
+        },
+        {
+            "Type": "file[]",
+            "Name": "Input.Files",
+            "Items": [ref_fa_href]
+        }
+    ]
 }
-
-metadata_json_template['Properties'].append(ref_fa_input_obj)
-metadata_json_template['Properties'].append(dragen_input_obj)
-metadata_json_template['Properties'].append(gender_input_obj)
-
 
 with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
 print('\nLaunching cromwell')
-cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v17.wdl"]
-subprocess.check_call(cromwell_cmd)
+#cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v17.wdl"]
+#subprocess.check_call(cromwell_cmd)
+
+tempfile = output_dir + "/tester.txt"
+with open(tempfile, 'w+') as g:
+    g.write('Simulated chromoseq run\n')
+
 print('\nCromwell complete')
