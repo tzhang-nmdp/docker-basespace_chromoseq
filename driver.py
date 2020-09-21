@@ -139,11 +139,7 @@ with open(metadata_outfile, "w+") as f:
     json.dump(metadata_json_template, f)
 
 print('\nLaunching cromwell')
-#cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v17.wdl"]
-#subprocess.check_call(cromwell_cmd)
-
-tempfile = output_dir + "/tester.txt"
-with open(tempfile, 'w+') as g:
-    g.write('Simulated chromoseq run\n')
+cromwell_cmd = ["/usr/bin/java", "-Dconfig.file=/opt/files/basespace_cromwell.config", "-jar", "/opt/cromwell-36.jar", "run", "-t", "wdl", "-i", "/opt/files/inputs.json", "/opt/files/Chromoseq.v17.wdl"]
+subprocess.check_call(cromwell_cmd)
 
 print('\nCromwell complete')
