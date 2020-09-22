@@ -315,35 +315,35 @@ RUN cd / && \
 
 RUN mkdir /opt/files/
 
-COPY duphold_static /usr/local/bin/duphold_static
-COPY FilterManta.pl /usr/local/bin/FilterManta.pl
-COPY ichorToVCF.pl /usr/local/bin/ichorToVCF.pl
-COPY configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
-COPY nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds
-COPY basespace_cromwell.config /opt/files/basespace_cromwell.config
+COPY workflow_files/duphold_static /usr/local/bin/duphold_static
+COPY workflow_scripts/FilterManta.pl /usr/local/bin/FilterManta.pl
+COPY workflow_scripts/ichorToVCF.pl /usr/local/bin/ichorToVCF.pl
+COPY workflow_files/configManta.hg38.py.ini /opt/files/configManta.hg38.py.ini
+COPY workflow_files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds /opt/files/nextera_hg38_500kb_median_normAutosome_median.rds_median.n9.gr.rds
+COPY workflow_files/basespace_cromwell.config /opt/files/basespace_cromwell.config
 
-COPY all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
-COPY all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
-COPY all_sequences.fa.fai /opt/files/all_sequences.fa.fai
+COPY workflow_files/all_sequences.fa.bed.gz /opt/files/all_sequences.fa.bed.gz
+COPY workflow_files/all_sequences.fa.bed.gz.tbi /opt/files/all_sequences.fa.bed.gz.tbi
+COPY workflow_files/all_sequences.fa.fai /opt/files/all_sequences.fa.fai
 
-COPY chromoseq_genes.bed /opt/files/chromoseq_genes.bed
-COPY hg38.cytoBandIdeo.bed.gz /opt/files/hg38.cytoBandIdeo.bed.gz
-COPY hg38.cytoBandIdeo.bed.gz.tbi /opt/files/hg38.cytoBandIdeo.bed.gz.tbi
-COPY chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
-COPY chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
+COPY workflow_files/chromoseq_genes.bed /opt/files/chromoseq_genes.bed
+COPY workflow_files/hg38.cytoBandIdeo.bed.gz /opt/files/hg38.cytoBandIdeo.bed.gz
+COPY workflow_files/hg38.cytoBandIdeo.bed.gz.tbi /opt/files/hg38.cytoBandIdeo.bed.gz.tbi
+COPY workflow_files/chromoseq_sv_filter.bedpe.gz /opt/files/chromoseq_sv_filter.bedpe.gz
+COPY workflow_files/chromoseq_translocations.bedpe /opt/files/chromoseq_translocations.bedpe
 
-COPY driver.py /opt/files/driver.py
-COPY Chromoseq.v17.wdl /opt/files/Chromoseq.v17.wdl
+COPY workflow_scripts/driver.py /opt/files/driver.py
+COPY workflow_files/Chromoseq.v17.wdl /opt/files/Chromoseq.v17.wdl
 
-COPY make_report3.py /usr/local/bin/make_report3.py
-COPY addReadCountsToVcfCRAM3.py /usr/local/bin/addReadCountsToVcfCRAM3.py
+COPY workflow_scripts/make_report3.py /usr/local/bin/make_report3.py
+COPY workflow_scripts/addReadCountsToVcfCRAM3.py /usr/local/bin/addReadCountsToVcfCRAM3.py
 
-COPY chromoseq_custom_anntations.040920.vcf.gz /opt/files/chromoseq_custom_anntations.040920.vcf.gz
-COPY chromoseq_custom_anntations.040920.vcf.gz.tbi /opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi
-COPY chromoseq_hotspot.vcf.gz /opt/files/chromoseq_hotspot.vcf.gz
-COPY chromoseq_hotspot.vcf.gz.tbi /opt/files/chromoseq_hotspot.vcf.gz.tbi
+COPY workflow_files/chromoseq_custom_anntations.040920.vcf.gz /opt/files/chromoseq_custom_anntations.040920.vcf.gz
+COPY workflow_files/chromoseq_custom_anntations.040920.vcf.gz.tbi /opt/files/chromoseq_custom_anntations.040920.vcf.gz.tbi
+COPY workflow_files/chromoseq_hotspot.vcf.gz /opt/files/chromoseq_hotspot.vcf.gz
+COPY workflow_files/chromoseq_hotspot.vcf.gz.tbi /opt/files/chromoseq_hotspot.vcf.gz.tbi
 
-COPY logging_helper.sh /opt/files/logging_helper.sh
+COPY workflow_scripts/logging_helper.sh /opt/files/logging_helper.sh
 
 RUN chmod a+wrx /opt/files/*
 RUN chmod a+wrx /usr/local/bin/*
