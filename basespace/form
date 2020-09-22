@@ -23,7 +23,8 @@
         	"requiredMessage": "Please choose a Dragen alignment",
             "helpText": "The Dragen alignment results that you wish to analyze",
             "searchQuery": "App.Id:6840834 OR App.Id:10489479",
-	        "id": "app-result-id"
+	        "id": "app-result-id",
+            "rules": "data-reader"
         },
         {
             "$type": "FileChooser",
@@ -34,7 +35,8 @@
             "required": true,
             "requiredMessage": "Please choose the reference fasta",
             "helpText": "The reference fasta file that was used in the Dragen alignment",
-            "id": "ref-fa-id"
+            "id": "ref-fa-id",
+            "rules": "data-reader"
         },
         
         {
@@ -79,8 +81,8 @@
             "$type": "PermissionValidationRule",
             "permissions": "Read",
             "severity": "Error",
-            "message": "You do not have read access to the selected sample",
-            "id": "sample-reader"
+            "message": "You do not have read access to the selected data",
+            "id": "data-reader"
         },
         {
             "$type": "PermissionValidationRule",
