@@ -159,6 +159,7 @@ RUN cd /tmp/ && \
     RUN R -e "install.packages('BiocManager',dependencies=TRUE, repos='http://cran.rstudio.com/')"
     RUN R -e 'BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")'
    
+   
 ##########################################
 # Install conda and all python stuff
 ##########################################
