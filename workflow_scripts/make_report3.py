@@ -94,7 +94,7 @@ MinFracRegion10 = 95
 MinRegionCov = 10
 
 
-(script, Name, genevcf_file, svvcf_file, genelist, mapsum, genecov, svcov) = sys.argv
+(script, Name, genevcf_file, svvcf_file, genelist) = sys.argv
 
 # variants to print out
 vars = {}
@@ -103,24 +103,6 @@ vars['cna'] = []
 vars['knowngenes'] = []
 vars['genelevel'] = []
 vars['novelsv'] = []
-
-mapdata = {}
-rgmapdata = {}
-
-mapdata['Average sequenced coverage over genome'] = ''
-mapdata['Average alignment coverage over genome'] = ''
-mapdata['Total input reads'] = ''
-mapdata['Mapped reads'] = ''
-mapdata['Number of duplicate marked reads'] = '';
-mapdata['Number of unique reads (excl. duplicate marked reads)'] = ''
-mapdata['Properly paired reads'] = ''
-mapdata['Insert length: mean'] = ''
-      
-# read in mapping summary data
-with open(mapsum, 'r') as m:
-    reader = csv.reader(m, delimiter=',')
-    for row in reader:
-        mapdata[row[0]] = row[1]
     
 # read genelist
 knowngenelist = set()
@@ -484,42 +466,5 @@ if len(vars['novelsv']) > 0:
 else:
     print("\t"+"NONE DETECTED\n")
 
-## now print QC stuff
-
-print("*** CHROMOSEQ QC ***\n")
-
-print("AVERAGE COVERAGE:\t",mapdata['Average alignment coverage over genome'])
-print("TOTAL READS:\t",mapdata['Total input reads'])
-print("MAPPED READS:\t",mapdata['Mapped reads']," ",str(round(int(mapdata['Mapped reads'])/int(mapdata['Total input reads'])*100,1))+"%")
-print("DUPLICATES:\t",mapdata['Number of duplicate marked reads']," ",str(round(int(mapdata['Number of duplicate marked reads'])/int(mapdata['Total input reads'])*100,1))+"%")
-print("UNIQUE READS:\t",mapdata['Number of unique reads (excl. duplicate marked reads)']," ",str(round(int(mapdata['Number of unique reads (excl. duplicate marked reads)'])/int(mapdata['Total input reads'])*100,1))+"%")
-print("PROPERLY PAIRED READS:\t"+str(mapdata['Properly paired reads'])+" ",str(round(int(mapdata['Properly paired reads'])/int(mapdata['Total input reads'])*100,1))+"%")
-print("MEAN INSERT SIZE:\t"+mapdata['Insert length: mean']+"\n")
-
-print("*** Gene Coverage Metrics: Exons with <"+str(MinFracGene20)+"% at 20x or mean coverage <"+str(MinGeneCov)+"x ***\n")
-# gene cov
-with open(genecov, 'r') as g:
-    reader = csv.reader(g, delimiter='\t')
-    line_count = 0
-    for row in reader:
-        if line_count == 0:
-            print("\t".join(row))
-        elif float(row[9]) < MinFracGene20 or float(row[12]) < MinGeneCov:
-            print("\t".join(row))
-
-        line_count += 1
-        
-        
-print("\n*** SV Region Coverage Metrics: Exons with <"+str(MinFracRegion10)+"% at 20x or mean coverage <"+str(MinRegionCov)+"x ***\n")
-with open(svcov, 'r') as sv:
-    reader = csv.reader(sv, delimiter='\t')
-    line_count = 0
-    for row in reader:
-        if line_count == 0:
-            print("\t".join(row))
-        elif float(row[8]) < MinFracRegion10 or float(row[12]) < MinRegionCov:
-            print("\t".join(row))
-            
-        line_count += 1
 
         

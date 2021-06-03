@@ -4,8 +4,6 @@ workflow ChromoSeq {
   String CramIndex 
   String Name
   String Gender
-  String MappingSummary
-  String? CoverageSummary
   String OutputDir
   
   String Translocations
@@ -57,29 +55,7 @@ workflow ChromoSeq {
     tmp=tmp,
     docker=chromoseq_docker
   }
-    
-  call cov_qc as gene_qc {
-    input: Cram=Cram,
-    CramIndex=CramIndex,
-    Name=Name,
-    Bed=GenesBed,
-    refFasta=Reference,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
-  }
 
-  call cov_qc as sv_qc {
-    input: Cram=Cram,
-    CramIndex=CramIndex,
-    Name=Name,
-    Bed=prepare_bed.svbed,
-    refFasta=Reference,
-    jobGroup=JobGroup,
-    tmp=tmp,
-    docker=chromoseq_docker
-  }
-  
   call run_manta {
     input: Bam=Cram,
     BamIndex=CramIndex,
@@ -205,10 +181,6 @@ workflow ChromoSeq {
     input: SVVCF=annotate_svs.vcf,
     GeneVCF=annotate_variants.annotated_filtered_vcf,
     KnownGenes=prepare_bed.genes,
-    GeneQC=gene_qc.qc_out,
-    SVQC=sv_qc.qc_out,
-    MappingSummary=MappingSummary,
-    CoverageSummary=CoverageSummary,
     Name=Name,
     jobGroup=JobGroup,
     docker=chromoseq_docker,
@@ -228,14 +200,8 @@ workflow ChromoSeq {
     run_ichor.allgenomewide_pdf,
     run_ichor.rdata,run_ichor.wig,
     run_ichor.correct_pdf,
-    gene_qc.qc_out,
-    gene_qc.region_dist,
-    gene_qc.global_dist,
-    sv_qc.qc_out,
-    sv_qc.region_dist,
     annotate_variants.annotated_filtered_vcf,
-    make_report.report],  #make_bw.bigwig_file,
-#    make_igv.igv_xml],
+    make_report.report], 
     OutputDir=OutputDir,
     jobGroup=JobGroup,
     docker=chromoseq_docker
@@ -270,40 +236,7 @@ task prepare_bed {
     Array[String] chroms = read_lines("chroms.txt")
   }
 }
-
-task cov_qc {
-  String Cram
-  String CramIndex
-  String Bed
-  String Name
-  String refFasta
-  String jobGroup
-  String tmp
-  String docker
-  
-  command <<<
-    set -eo pipefail && \
-    /opt/conda/bin/mosdepth -n -f ${refFasta} -t 4 -i 2 -x -Q 20 -b ${Bed} --thresholds 10,20,30,40 "${Name}" ${Cram} && \
-    /usr/local/bin/bedtools intersect -header -b "${Name}.regions.bed.gz" -a "${Name}.thresholds.bed.gz" -wo | \
-    awk -v OFS="\t" '{ if (NR==1){ print $0,"%"$5,"%"$6,"%"$7,"%"$8,"MeanCov"; } else { print $1,$2,$3,$4,$5,$6,$7,$8,sprintf("%.2f\t%.2f\t%.2f\t%.2f",$5/$NF*100,$6/$NF*100,$7/$NF*100,$8/$NF*100),$(NF-1); } }' > "${Name}."$(basename ${Bed} .bed)".covqc.txt" && \
-    mv "${Name}.mosdepth.region.dist.txt" "${Name}.mosdepth."$(basename ${Bed} .bed)".region.dist.txt"
-  >>>
-  
-  runtime {
-    docker_image: docker
-    cpu: "4"
-    memory: "32 G"
-    job_group: jobGroup
-  }
-  
-  output {
-    File qc_out = glob("*.covqc.txt")[0]
-    File global_dist = "${Name}.mosdepth.global.dist.txt"
-    File region_dist = glob("*.region.dist.txt")[0]
-  }
-
-}
-
+ 
 task run_manta {
   String Bam
   String BamIndex 
@@ -651,22 +584,13 @@ task make_report {
   String SVVCF
   String GeneVCF
   String KnownGenes
-  String MappingSummary
-  String? CoverageSummary
-  String SVQC
-  String GeneQC
   String Name
   String jobGroup
   String tmp
   String docker
-  Int? MinGeneCov
-  Int? MinFracGene20
-  Int? MinRegionCov
-  Int? MinFracRegion10
   
   command <<<
-    cat ${MappingSummary} ${CoverageSummary} | cut -d ',' -f 3,4 | sort -u > qc.txt && \
-    /opt/conda/bin/python /usr/local/bin/make_report3.py ${Name} ${GeneVCF} ${SVVCF} ${KnownGenes} "qc.txt" ${GeneQC} ${SVQC} > "${Name}.chromoseq.txt"
+    /opt/conda/bin/python /usr/local/bin/make_report3.py ${Name} ${GeneVCF} ${SVVCF} ${KnownGenes} > "${Name}.chromoseq.txt"
   >>>
   
   runtime {

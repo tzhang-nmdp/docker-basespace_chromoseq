@@ -156,6 +156,9 @@ RUN cd /tmp/ && \
     ## Fix library path
     echo "R_LIBS_USER='/usr/local/lib/R/site-library'" >> /usr/local/lib/R/etc/Renviron && \
     echo "R_LIBS=\${R_LIBS-'/usr/local/lib/R/site-library:/usr/local/lib/R/library:/usr/lib/R/library'}" >> /usr/local/lib/R/etc/Renviron
+    RUN R -e "install.packages('BiocManager',dependencies=TRUE, repos='http://cran.rstudio.com/')"
+    RUN R -e 'BiocManager::install("BSgenome.Hsapiens.UCSC.hg38")'
+   
    
 ##########################################
 # Install conda and all python stuff
